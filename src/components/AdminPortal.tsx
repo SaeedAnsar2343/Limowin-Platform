@@ -32,6 +32,7 @@ import {
 
 export const AdminPortal: React.FC = () => {
   const {
+    user,
     siteSettings,
     updateSiteSettings,
     paymentGateways,
@@ -130,6 +131,26 @@ export const AdminPortal: React.FC = () => {
     setAdminReplyText('');
     showToast('Reply dispatched to player!', 'success');
   };
+
+  if (!user || (user.role !== 'admin' && user.email?.toLowerCase() !== 'saeed.samadelivery@gmail.com')) {
+    return (
+      <div className="max-w-md mx-auto my-24 p-8 bg-white rounded-3xl border border-rose-200 shadow-2xl text-center">
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4 font-black text-2xl shadow-inner">
+          🔒
+        </div>
+        <h2 className="text-xl font-black text-slate-900 mb-2">Restricted Access</h2>
+        <p className="text-xs text-slate-500 mb-6 font-medium leading-relaxed">
+          Admin portal access is restricted exclusively to authorized administrator (<span className="font-bold text-slate-700">saeed.samadelivery@gmail.com</span>).
+        </p>
+        <button
+          onClick={() => setActiveModal('login')}
+          className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md"
+        >
+          Sign In as Administrator
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">

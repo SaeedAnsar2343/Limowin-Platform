@@ -90,15 +90,17 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* Admin Switch Pill */}
-          <button
-            onClick={() => setActiveModal('admin')}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
-            title="Open Admin Portal"
-          >
-            <Shield className="w-3.5 h-3.5 text-amber-600" />
-            <span>Admin</span>
-          </button>
+          {/* Admin Switch Pill - ONLY visible to Super Admin (saeed.samadelivery@gmail.com) */}
+          {user && (user.role === 'admin' || user.email?.toLowerCase() === 'saeed.samadelivery@gmail.com') && (
+            <button
+              onClick={() => setActiveModal('admin')}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-black transition-all border border-amber-300 shadow-xs"
+              title="Super Admin Portal (Restricted)"
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-600" />
+              <span>Admin Portal</span>
+            </button>
+          )}
 
           {/* Customer Support Trigger */}
           <button

@@ -14,7 +14,9 @@ import { PolicyPages } from './components/PolicyPages';
 import { CheckCircle2, AlertCircle, Info, Trophy, Headphones } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { activeModal, setActiveModal, notifications, theme } = useApp();
+  const { activeModal, setActiveModal, notifications, theme, user } = useApp();
+
+  const isSuperAdmin = user && (user.role === 'admin' || user.email?.toLowerCase() === 'saeed.samadelivery@gmail.com');
 
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
@@ -29,7 +31,33 @@ export const AppContent: React.FC = () => {
       {/* Main Body */}
       <main className="flex-1">
         {activeModal === 'admin' ? (
-          <AdminPortal />
+          isSuperAdmin ? (
+            <AdminPortal />
+          ) : (
+            <div className="max-w-md mx-auto my-24 p-8 bg-white rounded-3xl border border-rose-200 shadow-2xl text-center animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4 font-black text-2xl shadow-inner">
+                🛡️
+              </div>
+              <h2 className="text-xl font-black text-slate-900 mb-2">Super Admin Access Only</h2>
+              <p className="text-xs text-slate-500 mb-6 font-medium leading-relaxed">
+                This operations portal is restricted exclusively to authorized platform administration (<span className="font-bold text-slate-700">saeed.samadelivery@gmail.com</span>). Unauthorized access is prohibited.
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setActiveModal('login')}
+                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md"
+                >
+                  Log In to Admin Account
+                </button>
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="w-full py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-xs font-bold transition-all"
+                >
+                  Return to Games Lobby
+                </button>
+              </div>
+            </div>
+          )
         ) : activeModal === 'policy' ? (
           <PolicyPages />
         ) : (

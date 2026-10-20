@@ -152,6 +152,7 @@ export interface UserProfile {
   bonusLockGamesRemaining: number; // Must play 5 games before bonus can be withdrawn
   currency: CurrencyType;
   avatar?: string;
+  phone?: string;
   kycStatus?: 'verified' | 'pending' | 'unverified';
   twoFactorEnabled?: boolean;
   createdAt: string;
@@ -260,7 +261,8 @@ interface AppContextType {
   // Auth
   loginUser: (email: string, password?: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
-  registerUser: (email: string, pass: string, name: string, refCode?: string) => Promise<boolean>;
+  loginWithPhone: (phoneNumber: string, otp: string, name?: string) => Promise<boolean>;
+  registerUser: (email: string, pass: string, name: string, phone: string, refCode?: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
   logout: () => void;
 
@@ -393,17 +395,17 @@ const defaultUser: UserProfile = {
 };
 
 const defaultAdmin: UserProfile = {
-  id: 'admin-1',
-  name: 'Super Admin',
-  email: 'admin@limowin.com',
+  id: 'admin-super-saeed',
+  name: 'Saeed Ansar (Super Admin)',
+  email: 'saeed.samadelivery@gmail.com',
   role: 'admin',
-  balance: initialDetectedCurrency === 'INR' ? 9999999.00 : 999999.00,
+  balance: initialDetectedCurrency === 'INR' ? 100000.00 : 2500.00,
   bonusBalance: 0,
   totalDeposited: 0,
   totalWithdrawn: 0,
-  vipLevel: 'Owner',
+  vipLevel: 'Owner & Super Admin',
   status: 'active',
-  referralCode: 'ADMIN-VIP',
+  referralCode: 'ADMIN-SAEED',
   referredBy: null,
   referralCount: 420,
   referralEarnings: 54200.00,
@@ -447,7 +449,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
   const [gameOverrides, setGameOverrides] = useState<Record<string, { bonusMultiplier: number; customRtp?: number }>>({});
-  const [user, setUser] = useState<UserProfile | null>(defaultUser);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([defaultUser, defaultAdmin]);
   const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
   const [allWithdrawals, setAllWithdrawals] = useState<WithdrawalRequest[]>([]);
@@ -646,18 +648,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Login
   const loginUser = async (email: string, password?: string) => {
-    if (email === 'admin@limowin.com' && !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
+
+    if (isAdmin && !password) {
       setUser(defaultAdmin);
-      showToast('Logged in as Super Admin!', 'success');
+      showToast('Logged in as Super Admin Saeed!', 'success');
       setActiveModal(null);
       return true;
     }
 
     try {
       if (password) {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const userCred = await signInWithEmailAndPassword(auth, cleanEmail, password);
         const fbUser = userCred.user;
-        const found = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+        let found = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+
+        if (isAdmin) {
+          const adminProfile: UserProfile = {
+            ...defaultAdmin,
+            name: fbUser.displayName || defaultAdmin.name,
+            email: cleanEmail
+          };
+          setUser(adminProfile);
+          showToast('Welcome back, Super Admin Saeed!', 'success');
+          setActiveModal(null);
+          return true;
+        }
+
         if (found) {
           if (found.status === 'blocked') {
             showToast('Account suspended by Admin. Contact VIP Support.', 'error');
@@ -671,7 +689,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    const found = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (isAdmin) {
+      setUser(defaultAdmin);
+      showToast('Welcome back, Super Admin Saeed!', 'success');
+      setActiveModal(null);
+      return true;
+    }
+
+    const found = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
     if (found) {
       if (found.status === 'blocked') {
         showToast('Account suspended by Admin. Contact VIP Support.', 'error');
@@ -692,8 +717,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const fbUser = result.user;
+      const cleanEmail = (fbUser.email || '').toLowerCase();
+      const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
 
-      let found = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+      if (isAdmin) {
+        const adminProfile: UserProfile = {
+          ...defaultAdmin,
+          name: fbUser.displayName || defaultAdmin.name,
+          email: cleanEmail,
+          avatar: fbUser.photoURL || undefined
+        };
+        setUser(adminProfile);
+        showToast('Welcome Super Admin Saeed!', 'success');
+        setActiveModal(null);
+        return true;
+      }
+
+      let found = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
       if (!found && fbUser.email) {
         found = {
           id: fbUser.uid,
@@ -729,24 +769,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return true;
       }
     } catch {
-      setUser(defaultUser);
-      showToast('Signed in securely with Google Account!', 'success');
-      setActiveModal(null);
-      return true;
+      showToast('Google sign in cancelled or popup closed.', 'info');
     }
     return false;
   };
 
-  // Register
-  const registerUser = async (email: string, pass: string, name: string, refCode?: string) => {
-    try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-      const fbUser = userCred.user;
+  // Login / Signup with Mobile Number
+  const loginWithPhone = async (phoneNumber: string, otp: string, name?: string) => {
+    const cleanPhone = phoneNumber.trim();
+    if (!cleanPhone || cleanPhone.length < 7) {
+      showToast('Please enter a valid mobile number', 'error');
+      return false;
+    }
+    if (!otp || otp.length < 4) {
+      showToast('Please enter the verification code sent to your phone', 'error');
+      return false;
+    }
 
+    let found = allUsers.find(u => u.phone === cleanPhone);
+    if (!found) {
       const newUser: UserProfile = {
-        id: fbUser.uid,
-        name: name || email.split('@')[0],
-        email: email,
+        id: 'usr-phone-' + Date.now(),
+        name: name || `VIP Member (${cleanPhone.slice(-4)})`,
+        email: `${cleanPhone.replace(/[^0-9]/g, '')}@limowin.player`,
+        phone: cleanPhone,
         role: 'player',
         balance: currency === 'INR' ? 500.00 : 10.00,
         bonusBalance: currency === 'INR' ? 100.00 : 1.00,
@@ -755,6 +801,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         vipLevel: 'Bronze VIP',
         status: 'active',
         referralCode: 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
+        referredBy: null,
+        referralCount: 0,
+        referralEarnings: 0,
+        gamesPlayedCount: 0,
+        bonusLockGamesRemaining: 5,
+        currency: currency,
+        kycStatus: 'verified',
+        twoFactorEnabled: true,
+        createdAt: new Date().toISOString()
+      };
+      await syncUserToFirestore(newUser);
+      setAllUsers(prev => [newUser, ...prev]);
+      found = newUser;
+    }
+
+    if (found.status === 'blocked') {
+      showToast('Account suspended by Admin. Contact VIP Support.', 'error');
+      return false;
+    }
+
+    setUser(found);
+    showToast(`Signed in with Mobile Number ${cleanPhone}!`, 'success');
+    setActiveModal(null);
+    return true;
+  };
+
+  // Register with Email and Required Phone
+  const registerUser = async (email: string, pass: string, name: string, phone: string, refCode?: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
+
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+      const fbUser = userCred.user;
+
+      const newUser: UserProfile = {
+        id: fbUser.uid,
+        name: name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        phone: phone || undefined,
+        role: isAdmin ? 'admin' : 'player',
+        balance: isAdmin ? 100000.00 : (currency === 'INR' ? 500.00 : 10.00),
+        bonusBalance: isAdmin ? 0 : (currency === 'INR' ? 100.00 : 1.00),
+        totalDeposited: 0,
+        totalWithdrawn: 0,
+        vipLevel: isAdmin ? 'Owner & Super Admin' : 'Bronze VIP',
+        status: 'active',
+        referralCode: isAdmin ? 'ADMIN-SAEED' : 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
         referredBy: refCode || null,
         referralCount: 0,
         referralEarnings: 0,
@@ -775,16 +869,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       const newUser: UserProfile = {
         id: 'usr-' + Date.now(),
-        name: name || email.split('@')[0],
-        email,
-        role: 'player',
-        balance: currency === 'INR' ? 500.00 : 10.00,
-        bonusBalance: currency === 'INR' ? 100.00 : 1.00,
+        name: name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        phone: phone || undefined,
+        role: isAdmin ? 'admin' : 'player',
+        balance: isAdmin ? 100000.00 : (currency === 'INR' ? 500.00 : 10.00),
+        bonusBalance: isAdmin ? 0 : (currency === 'INR' ? 100.00 : 1.00),
         totalDeposited: 0,
         totalWithdrawn: 0,
-        vipLevel: 'Bronze VIP',
+        vipLevel: isAdmin ? 'Owner & Super Admin' : 'Bronze VIP',
         status: 'active',
-        referralCode: 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
+        referralCode: isAdmin ? 'ADMIN-SAEED' : 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
         referredBy: refCode || null,
         referralCount: 0,
         referralEarnings: 0,
@@ -799,7 +894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await syncUserToFirestore(newUser);
       setUser(newUser);
       setAllUsers(prev => [newUser, ...prev]);
-      showToast(`Welcome to ${siteSettings.siteName}! ${formatCurrency(newUser.bonusBalance)} Deposit Bonus added.`, 'success');
+      showToast(`Welcome to ${siteSettings.siteName}! Account created successfully.`, 'success');
       setActiveModal(null);
       return true;
     }
@@ -1212,6 +1307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         loginUser,
         loginWithGoogle,
+        loginWithPhone,
         registerUser,
         resetPassword,
         logout,
