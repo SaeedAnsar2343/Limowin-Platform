@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userEmail) {
+      return isAuthenticated() && (
+        (request.auth.token.email != null && request.auth.token.email.lower() == userEmail.lower()) ||
+        request.auth.uid == userEmail
+      );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email != null && request.auth.token.email in [
+          'saeed@aleazazdelivery.ae',
+          'admin@zomee.app',
+          'admin@zomee.online',
+          'admin@limowin.com'
+        ])
+      );
+    }
+
+    // 1. Limowin Casino Platform Settings (Site name, Gateways, Overrides)
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // 2. Users Collection (Players & Admins)
+    match /users/{userId} {
+      allow read, write: if true;
+
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // 3. Deposits Collection
+    match /deposits/{depositId} {
+      allow read, write: if true;
+    }
+
+    // 4. Withdrawals Collection
+    match /withdrawals/{withdrawalId} {
+      allow read, write: if true;
+    }
+
+    // 5. Promotions Collection
+    match /promotions/{promoId} {
+      allow read, write: if true;
+    }
+
+    // 6. Game History & Bets
+    match /gameHistory/{historyId} {
+      allow read, write: if true;
+    }
+
+    // Catch-all for other platform collections
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

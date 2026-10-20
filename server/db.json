@@ -1,0 +1,219 @@
+{
+  "siteSettings": {
+    "siteName": "Limowin",
+    "siteTagline": "World's Premier 3D Gaming & Entertainment Platform",
+    "logoUrl": "/assets/games/ae-dragontiger.png",
+    "bannerAnnouncement": "🎉 Welcome to Limowin! Grab 200% Welcome Bonus on your first deposit today! 24/7 VIP Support active.",
+    "supportEmail": "support@limowin.com",
+    "supportTelegram": "@LimowinOfficialVIP",
+    "supportPhone": "+1 (800) 546-6946 (Coming Soon)",
+    "currencySymbol": "$",
+    "minDeposit": 10,
+    "maxDeposit": 50000,
+    "minWithdrawal": 20,
+    "maxWithdrawal": 100000,
+    "defaultTheme": "light"
+  },
+  "paymentGateways": {
+    "cryptoUsdtTrc20": {
+      "enabled": true,
+      "address": "TXY89zXn7KaP9LmRtWv3Q1bB7GqK2sP9Aa",
+      "network": "Tron (TRC-20)",
+      "qrCodeUrl": "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TXY89zXn7KaP9LmRtWv3Q1bB7GqK2sP9Aa",
+      "bonusPercent": 5,
+      "instructions": "Send only USDT TRC-20 to this address. Credits automatically in 1-3 network confirmations."
+    },
+    "cryptoUsdtErc20": {
+      "enabled": true,
+      "address": "0x71C94bC44A9996d912B3B9c47e8e6C7b2A3C1E4F",
+      "network": "Ethereum (ERC-20)",
+      "qrCodeUrl": "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=0x71C94bC44A9996d912B3B9c47e8e6C7b2A3C1E4F",
+      "bonusPercent": 5,
+      "instructions": "Send only USDT ERC-20 to this address. Minimum deposit $20."
+    },
+    "upiFastPay": {
+      "enabled": true,
+      "upiId": "limowin.pay@icici",
+      "qrCodeUrl": "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=limowin.pay@icici&pn=LimowinGaming",
+      "bonusPercent": 3,
+      "instructions": "Scan QR with GPay, PhonePe, Paytm, or UPI App. Upload screenshot or enter 12-digit UTR."
+    },
+    "bankWireTransfer": {
+      "enabled": true,
+      "bankName": "Standard Chartered International",
+      "accountName": "Limowin Global Gaming Ltd",
+      "accountNumber": "98230045182930",
+      "ifscSwift": "SCBLINBBXXX",
+      "branch": "Financial Center Branch",
+      "instructions": "Include your user ID in transfer remarks. Takes 5-15 minutes after approval."
+    }
+  },
+  "promotions": [
+    {
+      "id": "promo-1",
+      "title": "200% Welcome Package",
+      "subtitle": "Double your first deposit up to $2,500 + 200 Free Spins",
+      "code": "LIMO200",
+      "bonusPercent": 200,
+      "maxAmount": 2500,
+      "minDeposit": 20,
+      "turnover": 15,
+      "category": "All Games",
+      "active": true,
+      "badge": "NEW PLAYERS"
+    },
+    {
+      "id": "promo-2",
+      "title": "15% Real Weekly Cashback",
+      "subtitle": "Zero wagering requirements paid every Monday automatically",
+      "code": "CASHBACK15",
+      "bonusPercent": 15,
+      "maxAmount": 5000,
+      "minDeposit": 50,
+      "turnover": 1,
+      "category": "Live Casino & Slots",
+      "active": true,
+      "badge": "VIP CLUB"
+    },
+    {
+      "id": "promo-3",
+      "title": "Sports Multi-Bet 100% Boost",
+      "subtitle": "Place accumulator bets on Cricket & Football for up to 100% extra profit",
+      "code": "SPORTS100",
+      "bonusPercent": 100,
+      "maxAmount": 1000,
+      "minDeposit": 10,
+      "turnover": 5,
+      "category": "Sports",
+      "active": true,
+      "badge": "SPORTS SPECIAL"
+    },
+    {
+      "id": "promo-4",
+      "title": "Crypto Instant Deposit 5% Extra",
+      "subtitle": "Get 5% extra cash on every single USDT TRC20 or ERC20 deposit",
+      "code": "CRYPTOMAX",
+      "bonusPercent": 5,
+      "maxAmount": 10000,
+      "minDeposit": 20,
+      "turnover": 3,
+      "category": "Crypto",
+      "active": true,
+      "badge": "INSTANT"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-demo-1",
+      "name": "Alex Mercer",
+      "email": "alex.vip@gmail.com",
+      "role": "player",
+      "balance": 18950,
+      "bonusBalance": 1275,
+      "totalDeposited": 25500,
+      "totalWithdrawn": 13200,
+      "vipLevel": "Gold VIP",
+      "status": "active",
+      "referralCode": "LIMO-ALEX77",
+      "referredBy": "ROOT",
+      "referralCount": 8,
+      "referralEarnings": 1640,
+      "createdAt": "2026-09-15T10:00:00Z"
+    },
+    {
+      "id": "admin-1",
+      "name": "Super Admin",
+      "email": "admin@limowin.com",
+      "role": "admin",
+      "balance": 999999,
+      "bonusBalance": 0,
+      "totalDeposited": 0,
+      "totalWithdrawn": 0,
+      "vipLevel": "Owner",
+      "status": "active",
+      "referralCode": "ADMIN-VIP",
+      "referredBy": null,
+      "referralCount": 420,
+      "referralEarnings": 54200,
+      "createdAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "depositRequests": [
+    {
+      "id": "dep-101",
+      "userId": "user-demo-1",
+      "userName": "Alex Mercer",
+      "userEmail": "alex.vip@gmail.com",
+      "method": "USDT (TRC-20)",
+      "amount": 500,
+      "bonusAmount": 25,
+      "txHash": "7f8b91a24d0819c991b16e00234acfe188204",
+      "status": "approved",
+      "createdAt": "2026-10-20T22:15:00Z",
+      "approvedAt": "2026-10-20T22:12:51.143Z"
+    },
+    {
+      "id": "dep-100",
+      "userId": "user-demo-1",
+      "userName": "Alex Mercer",
+      "userEmail": "alex.vip@gmail.com",
+      "method": "UPI Instant",
+      "amount": 250,
+      "bonusAmount": 7.5,
+      "txHash": "UPI-REF-984210385921",
+      "status": "approved",
+      "createdAt": "2026-10-19T14:20:00Z"
+    }
+  ],
+  "withdrawalRequests": [
+    {
+      "id": "wth-201",
+      "userId": "user-demo-1",
+      "userName": "Alex Mercer",
+      "userEmail": "alex.vip@gmail.com",
+      "method": "Bank Transfer",
+      "details": "Acc: 98230045182930 / IFSC: HDFC000182",
+      "amount": 1200,
+      "fee": 0,
+      "netAmount": 1200,
+      "status": "approved",
+      "createdAt": "2026-10-20T23:45:00Z",
+      "approvedAt": "2026-10-20T22:12:56.864Z",
+      "txRef": "PAYOUT-1792534376864"
+    },
+    {
+      "id": "wth-200",
+      "userId": "user-demo-1",
+      "userName": "Alex Mercer",
+      "userEmail": "alex.vip@gmail.com",
+      "method": "USDT (TRC-20)",
+      "details": "Wallet: TXY89zXn7KaP9LmRtWv3Q1bB7GqK2sP9Aa",
+      "amount": 3500,
+      "fee": 0,
+      "netAmount": 3500,
+      "status": "approved",
+      "createdAt": "2026-10-18T11:10:00Z"
+    }
+  ],
+  "gameOverrides": {
+    "ae-dragontiger": {
+      "bonusMultiplier": 1.25,
+      "customRtp": 97
+    },
+    "fruity-bonanza": {
+      "bonusMultiplier": 1.5,
+      "customRtp": 97.2
+    },
+    "wingo": {
+      "bonusMultiplier": 1.4,
+      "customRtp": 98
+    }
+  },
+  "affiliateConfig": {
+    "tier1Percent": 15,
+    "tier2Percent": 25,
+    "tier3Percent": 35,
+    "minPayout": 50,
+    "payoutCycle": "Daily Realtime"
+  }
+}
