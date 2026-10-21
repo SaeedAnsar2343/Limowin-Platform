@@ -152,7 +152,7 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       </div>
 
       {/* 3D Glass Reels Window */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-6 shadow-2xl relative overflow-hidden">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-2 sm:p-6 shadow-2xl relative overflow-hidden">
         {/* Neon Light Bars */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-80" />
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-80" />
@@ -161,18 +161,18 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
         <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-0.5 bg-yellow-400/30 pointer-events-none z-10" />
 
         {/* 5-Reel Display */}
-        <div className="grid grid-cols-5 gap-3 relative z-0">
+        <div className="grid grid-cols-5 gap-1 sm:gap-3 relative z-0">
           {reels.map((col, colIdx) => (
             <div
               key={colIdx}
-              className={`flex flex-col space-y-2 bg-gradient-to-b from-slate-900 to-slate-800 p-2 rounded-xl border ${
+              className={`flex flex-col space-y-1 sm:space-y-2 bg-gradient-to-b from-slate-900 to-slate-800 p-1 sm:p-2 rounded-xl border ${
                 isSpinning ? 'border-amber-400/50 blur-[0.4px]' : 'border-slate-700'
               } shadow-inner transition-all duration-75`}
             >
               {col.map((sym, rowIdx) => (
                 <div
                   key={rowIdx}
-                  className={`h-20 sm:h-24 flex items-center justify-center text-4xl sm:text-5xl rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/90 shadow border border-slate-700/60 transition-transform ${
+                  className={`h-14 sm:h-24 flex items-center justify-center text-2xl sm:text-5xl rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/90 shadow border border-slate-700/60 transition-transform ${
                     winLine === rowIdx && lastWin ? 'scale-105 border-yellow-400 ring-2 ring-yellow-400/50 bg-amber-950/40' : ''
                   }`}
                 >

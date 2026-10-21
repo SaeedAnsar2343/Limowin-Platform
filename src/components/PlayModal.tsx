@@ -143,64 +143,62 @@ export const PlayModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-auto">
-        {/* Game Theater Top Bar */}
-        <div className="bg-slate-950 px-4 sm:px-6 py-3 border-b border-slate-800/80 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="text-white font-black text-sm uppercase tracking-wide">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/95 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl bg-slate-900 border-0 sm:border border-slate-800 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden my-auto min-h-screen sm:min-h-0 flex flex-col">
+        {/* Game Theater Top Bar - 100% Mobile Fitting */}
+        <div className="bg-slate-950 px-3 sm:px-6 py-2.5 sm:py-3 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center space-x-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+            <span className="text-white font-black text-xs sm:text-sm uppercase tracking-wide truncate">
               {activeGame.title}
             </span>
-            <span className="text-xs bg-slate-800 text-amber-400 px-2 py-0.5 rounded-md font-bold">
+            <span className="hidden sm:inline-block text-[10px] bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded font-bold shrink-0">
               {activeGame.provider}
             </span>
-            <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold">
+            <span className="hidden sm:inline-block text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold shrink-0">
               {currency} MODE
             </span>
             {effectiveBonusMult > 1 && (
-              <span className="text-xs bg-rose-950 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-bold flex items-center space-x-1">
+              <span className="hidden md:inline-flex text-[10px] bg-rose-950 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold items-center space-x-1 shrink-0">
                 <Flame className="w-3 h-3 text-rose-400" />
-                <span>{effectiveBonusMult}x Bonus Active</span>
+                <span>{effectiveBonusMult}x Active</span>
               </span>
             )}
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
             {/* Live Wallet Balance */}
             {user && (
-              <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
-                <Wallet className="w-4 h-4 text-emerald-400" />
-                <div className="flex flex-col text-right">
-                  <span className="text-[10px] text-slate-400 font-bold leading-none">REAL BALANCE</span>
-                  <span className="text-sm font-black text-emerald-400 leading-tight">
-                    {formatCurrency(currentBal)}
-                  </span>
-                </div>
+              <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl shrink-0">
+                <Wallet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="text-xs font-black text-emerald-400 leading-tight">
+                  {formatCurrency(currentBal)}
+                </span>
               </div>
             )}
 
             {/* Sound Toggle */}
             <button
               onClick={() => setSoundMuted(!soundMuted)}
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors shrink-0"
               title={soundMuted ? 'Unmute' : 'Mute'}
             >
               {soundMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
             </button>
 
-            {/* Close Button */}
+            {/* Close Button - ALWAYS visible on the right */}
             <button
               onClick={() => setActiveGame(null)}
-              className="p-2 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30 hover:bg-rose-600 hover:text-white transition-all"
+              className="p-1.5 sm:p-2 rounded-xl bg-rose-600 text-white hover:bg-rose-500 transition-all shadow-md shrink-0"
+              title="Close Game"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Game Render Body or Strict Login/Deposit Blockers */}
-        <div className="p-3 sm:p-6 bg-slate-950/60 overflow-y-auto max-h-[85vh]">
+        <div className="p-2 sm:p-6 bg-slate-950/60 overflow-y-auto max-h-[calc(100vh-60px)] sm:max-h-[85vh] flex-1">
           {!user ? (
             /* 1. Strict Login Required Barrier */
             <div className="py-16 px-6 text-center max-w-lg mx-auto space-y-5">

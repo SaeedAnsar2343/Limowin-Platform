@@ -27,7 +27,16 @@ export const LiveSupportModal: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const currentUserId = user ? user.id : 'user-demo-1';
+  const getGuestId = () => {
+    let gid = typeof window !== 'undefined' ? localStorage.getItem('limowin_guest_id') : null;
+    if (!gid) {
+      gid = 'guest-' + Math.random().toString(36).substring(2, 9);
+      if (typeof window !== 'undefined') localStorage.setItem('limowin_guest_id', gid);
+    }
+    return gid;
+  };
+
+  const currentUserId = user ? user.id : getGuestId();
 
   // Filter messages for current user session + global announcements
   const myMessages = chatMessages.filter(

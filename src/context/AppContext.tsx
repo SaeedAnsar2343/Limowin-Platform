@@ -530,7 +530,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ]);
   const [gameOverrides, setGameOverrides] = useState<Record<string, { bonusMultiplier: number; customRtp?: number }>>({});
   const [banners, setBanners] = useState<BannerSlide[]>(defaultBanners);
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUserState] = useState<UserProfile | null>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('limowin_auth_user');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch {}
+    return null;
+  });
+
+  const setUser = (newUserOrFn: UserProfile | null | ((prev: UserProfile | null) => UserProfile | null)) => {
+    setUserState(prev => {
+      const resolved = typeof newUserOrFn === 'function' ? newUserOrFn(prev) : newUserOrFn;
+      try {
+        if (typeof window !== 'undefined') {
+          if (resolved) {
+            localStorage.setItem('limowin_auth_user', JSON.stringify(resolved));
+          } else {
+            localStorage.removeItem('limowin_auth_user');
+          }
+        }
+      } catch {}
+      return resolved;
+    });
+  };
   const [allUsers, setAllUsers] = useState<UserProfile[]>([defaultUser, defaultAdmin]);
   const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
   const [allWithdrawals, setAllWithdrawals] = useState<WithdrawalRequest[]>([]);
@@ -1210,15 +1234,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveGameRoundToFirestore(user.id, historyItem);
   };
 
-  // Live Support Chat Action
+  // Helper to get or create persistent guest ID if not logged in
+  const getGuestId = () => {
+    let gid = typeof window !== 'undefined' ? localStorage.getItem('limowin_guest_id') : null;
+    if (!gid) {
+      gid = 'guest-' + Math.random().toString(36).substring(2, 9);
+      if (typeof window !== 'undefined') localStorage.setItem('limowin_guest_id', gid);
+    }
+    return gid;
+  };
+
+  // Live Support Chat Action (Strictly Per-User)
   const sendChatMessage = async (text: string, asAdmin: boolean = false, targetUserId?: string) => {
     if (!text.trim()) return;
-    const senderProfile = asAdmin ? defaultAdmin : (user || defaultUser);
+    const currentUserId = user ? user.id : getGuestId();
+    const currentUserName = user ? user.name : 'VIP Guest Player';
+    const currentUserEmail = user ? user.email : 'guest@limowin.vip';
+
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-      userId: asAdmin ? (targetUserId || 'user-demo-1') : senderProfile.id,
-      userName: senderProfile.name,
-      userEmail: senderProfile.email,
+      userId: asAdmin ? (targetUserId || 'guest') : currentUserId,
+      userName: asAdmin ? defaultAdmin.name : currentUserName,
+      userEmail: asAdmin ? defaultAdmin.email : currentUserEmail,
       sender: asAdmin ? 'admin' : 'user',
       message: text.trim(),
       createdAt: new Date().toISOString(),

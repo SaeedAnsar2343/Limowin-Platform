@@ -142,25 +142,25 @@ export const DiceGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       </div>
 
       {/* 3D Dice Felt Table */}
-      <div className="w-full bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950 border-x-4 border-slate-800 p-8 flex flex-col items-center justify-center shadow-inner relative overflow-hidden min-h-[260px]">
+      <div className="w-full bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950 border-x-4 border-slate-800 p-4 sm:p-8 flex flex-col items-center justify-center shadow-inner relative overflow-hidden min-h-[220px] sm:min-h-[260px]">
         {/* Felt Watermark */}
         <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none text-9xl">
           🎲
         </div>
 
         {/* 3 Dice Elements */}
-        <div className="flex items-center justify-center space-x-6 z-10">
+        <div className="flex items-center justify-center space-x-3 sm:space-x-6 z-10">
           {dice.map((val, idx) => (
             <div
               key={idx}
-              className={`w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-slate-100 via-white to-slate-200 rounded-2xl p-2 shadow-2xl border-2 border-slate-300 relative transition-transform transform ${
+              className={`w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-tr from-slate-100 via-white to-slate-200 rounded-2xl p-2 shadow-2xl border-2 border-slate-300 relative transition-transform transform ${
                 isRolling ? 'rotate-12 scale-95 blur-[0.5px]' : 'hover:scale-105'
               }`}
             >
               {DOT_POSITIONS[val].map((pos, pIdx) => (
                 <div
                   key={pIdx}
-                  className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 bg-rose-600 rounded-full shadow-inner transform -translate-x-1/2 -translate-y-1/2"
+                  className="absolute w-2.5 h-2.5 sm:w-4 sm:h-4 bg-rose-600 rounded-full shadow-inner transform -translate-x-1/2 -translate-y-1/2"
                   style={{ left: `${pos[0]}%`, top: `${pos[1]}%` }}
                 />
               ))}

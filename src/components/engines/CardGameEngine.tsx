@@ -142,31 +142,31 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto p-4 select-none">
       {/* Table Header */}
-      <div className="w-full bg-slate-900 border border-slate-800 rounded-t-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black">
+      <div className="w-full bg-slate-900 border border-slate-800 rounded-t-2xl p-2.5 sm:p-4 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-sm sm:text-base">
             🃏
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">{game.title}</h3>
-            <span className="text-xs text-slate-400">Live Studio Engine • {game.provider}</span>
+            <h3 className="text-white font-bold text-sm sm:text-lg">{game.title}</h3>
+            <span className="text-[10px] sm:text-xs text-slate-400">Live Studio Engine • {game.provider}</span>
           </div>
         </div>
 
         {lastWin !== null && lastWin > 0 && (
-          <div className="bg-emerald-900 text-emerald-300 px-4 py-1.5 rounded-full font-black text-sm flex items-center space-x-2 animate-bounce shadow-lg">
-            <Trophy className="w-4 h-4 text-yellow-400" />
+          <div className="bg-emerald-900 text-emerald-300 px-3 py-1 rounded-full font-black text-xs sm:text-sm flex items-center space-x-1.5 animate-bounce shadow-lg">
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
             <span>WIN +{formatCurrency(lastWin)}!</span>
           </div>
         )}
 
         {/* Live Roadmap */}
-        <div className="flex items-center space-x-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
-          <span className="text-xs text-slate-500 font-bold mr-1">Roadmap:</span>
-          {roadmap.map((res, i) => (
+        <div className="flex items-center space-x-1 bg-slate-950 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-slate-800">
+          <span className="text-[10px] sm:text-xs text-slate-500 font-bold mr-1">Roadmap:</span>
+          {roadmap.slice(-5).map((res, i) => (
             <div
               key={i}
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black ${
                 res === 'A'
                   ? 'bg-rose-600 text-white'
                   : res === 'B'
@@ -181,35 +181,35 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
       </div>
 
       {/* 3D Casino Felt Green Table */}
-      <div className="w-full bg-gradient-to-b from-emerald-900 via-emerald-950 to-slate-950 border-x-4 border-slate-800 p-8 shadow-inner relative overflow-hidden">
-        <div className="grid grid-cols-2 gap-8 max-w-lg mx-auto">
+      <div className="w-full bg-gradient-to-b from-emerald-900 via-emerald-950 to-slate-950 border-x border-slate-800 p-4 sm:p-8 shadow-inner relative overflow-hidden">
+        <div className="grid grid-cols-2 gap-3 sm:gap-8 max-w-lg mx-auto">
           {/* Side A Card (Dragon/Andar/Player) */}
-          <div className="flex flex-col items-center space-y-3">
-            <span className="font-black text-sm tracking-wider text-rose-400 uppercase bg-slate-950/80 px-4 py-1 rounded-full border border-rose-500/30">
+          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
+            <span className="font-black text-xs sm:text-sm tracking-wider text-rose-400 uppercase bg-slate-950/80 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full border border-rose-500/30">
               {getLabelA()}
             </span>
             <div
-              className={`w-28 h-40 bg-white rounded-2xl shadow-2xl border-2 border-slate-200 p-3 flex flex-col justify-between transition-transform transform ${
+              className={`w-20 h-28 sm:w-28 sm:h-40 bg-white rounded-xl sm:rounded-2xl shadow-2xl border-2 border-slate-200 p-2 sm:p-3 flex flex-col justify-between transition-transform transform ${
                 isDealing ? 'scale-95 blur-[0.4px]' : 'hover:scale-105'
               }`}
             >
               <div
-                className={`text-lg font-black leading-none ${
+                className={`text-sm sm:text-lg font-black leading-none ${
                   sideA[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
                 {sideA[0]?.value}
-                <span className="block text-sm">{sideA[0]?.suit}</span>
+                <span className="block text-xs sm:text-sm">{sideA[0]?.suit}</span>
               </div>
               <div
-                className={`text-4xl text-center self-center ${
+                className={`text-2xl sm:text-4xl text-center self-center ${
                   sideA[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
                 {sideA[0]?.suit}
               </div>
               <div
-                className={`text-lg font-black text-right leading-none ${
+                className={`text-sm sm:text-lg font-black text-right leading-none ${
                   sideA[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
@@ -219,32 +219,32 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
           </div>
 
           {/* Side B Card (Tiger/Bahar/Banker) */}
-          <div className="flex flex-col items-center space-y-3">
-            <span className="font-black text-sm tracking-wider text-blue-400 uppercase bg-slate-950/80 px-4 py-1 rounded-full border border-blue-500/30">
+          <div className="flex flex-col items-center space-y-2 sm:space-y-3">
+            <span className="font-black text-xs sm:text-sm tracking-wider text-blue-400 uppercase bg-slate-950/80 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full border border-blue-500/30">
               {getLabelB()}
             </span>
             <div
-              className={`w-28 h-40 bg-white rounded-2xl shadow-2xl border-2 border-slate-200 p-3 flex flex-col justify-between transition-transform transform ${
+              className={`w-20 h-28 sm:w-28 sm:h-40 bg-white rounded-xl sm:rounded-2xl shadow-2xl border-2 border-slate-200 p-2 sm:p-3 flex flex-col justify-between transition-transform transform ${
                 isDealing ? 'scale-95 blur-[0.4px]' : 'hover:scale-105'
               }`}
             >
               <div
-                className={`text-lg font-black leading-none ${
+                className={`text-sm sm:text-lg font-black leading-none ${
                   sideB[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
                 {sideB[0]?.value}
-                <span className="block text-sm">{sideB[0]?.suit}</span>
+                <span className="block text-xs sm:text-sm">{sideB[0]?.suit}</span>
               </div>
               <div
-                className={`text-4xl text-center self-center ${
+                className={`text-2xl sm:text-4xl text-center self-center ${
                   sideB[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
                 {sideB[0]?.suit}
               </div>
               <div
-                className={`text-lg font-black text-right leading-none ${
+                className={`text-sm sm:text-lg font-black text-right leading-none ${
                   sideB[0]?.color === 'red' ? 'text-rose-600' : 'text-slate-950'
                 }`}
               >
@@ -255,10 +255,10 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
         </div>
 
         {/* Tie Zone Marker */}
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-4 sm:mt-6">
           <button
             onClick={() => setBetSide('TIE')}
-            className={`px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all border ${
+            className={`px-4 sm:px-6 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all border ${
               betSide === 'TIE'
                 ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-2 ring-emerald-400 shadow-lg'
                 : 'bg-slate-950/80 text-emerald-400 border-emerald-500/40 hover:bg-emerald-950'

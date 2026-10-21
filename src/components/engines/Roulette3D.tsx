@@ -236,14 +236,14 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       </div>
 
       {/* Main Wheel & Betting Layout */}
-      <div className="w-full bg-slate-950 border-x border-slate-800 p-6 flex flex-col md:flex-row items-center justify-center gap-8">
+      <div className="w-full bg-slate-950 border-x border-slate-800 p-3 sm:p-6 flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8">
         {/* Wheel Canvas */}
         <div className="relative flex items-center justify-center">
           <canvas
             ref={canvasRef}
             width={320}
             height={320}
-            className="rounded-full shadow-[0_0_40px_rgba(245,158,11,0.25)] border-4 border-amber-500/40"
+            className="w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] rounded-full shadow-[0_0_40px_rgba(245,158,11,0.25)] border-4 border-amber-500/40"
           />
           {winningNumber !== null && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-950 border-2 border-yellow-400 text-white flex flex-col items-center justify-center shadow-2xl animate-pulse">

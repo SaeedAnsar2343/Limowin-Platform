@@ -118,7 +118,7 @@ export const MinesEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, o
         </div>
 
         {/* 5x5 Mines Grid */}
-        <div className="grid grid-cols-5 gap-2.5 w-full max-w-sm">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5 w-full max-w-sm px-1">
           {Array.from({ length: 25 }).map((_, idx) => {
             const isRev = revealed.includes(idx);
             const isMine = mineLocations.includes(idx);
@@ -128,7 +128,7 @@ export const MinesEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, o
                 key={idx}
                 onClick={() => clickTile(idx)}
                 disabled={!isPlaying || (isRev && !gameOver)}
-                className={`h-14 sm:h-16 rounded-xl font-black text-xl flex items-center justify-center transition-all ${
+                className={`h-12 sm:h-16 rounded-xl font-black text-lg sm:text-xl flex items-center justify-center transition-all ${
                   !isRev
                     ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700/60 shadow-inner'
                     : isMine

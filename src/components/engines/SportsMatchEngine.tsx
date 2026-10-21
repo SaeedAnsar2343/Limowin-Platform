@@ -136,7 +136,7 @@ export const SportsMatchEngine: React.FC<Props> = ({ game, balance, bonusMultipl
       </div>
 
       {/* Markets Selection */}
-      <div className="w-full bg-slate-900 border-x-4 border-slate-800 p-6 space-y-4">
+      <div className="w-full bg-slate-900 border-x-4 border-slate-800 p-3 sm:p-6 space-y-4">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
           Select Betting Market:
         </span>

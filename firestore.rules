@@ -14,21 +14,17 @@ service cloud.firestore {
       );
     }
 
-    function isAdmin() {
+    function isSuperAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        (request.auth.token.email != null && request.auth.token.email in [
-          'saeed@aleazazdelivery.ae',
-          'admin@zomee.app',
-          'admin@zomee.online',
-          'admin@limowin.com'
-        ])
+        (request.auth.token.email != null && request.auth.token.email.lower() == 'saeed.samadelivery@gmail.com')
       );
     }
 
-    // 1. Limowin Casino Platform Settings (Site name, Gateways, Overrides)
+    // 1. Limowin Platform Settings (Site name, Gateways, Deposit Bonuses, Hero Banners)
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if true;
     }
 
     // 2. Users Collection (Players & Admins)
@@ -60,7 +56,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Catch-all for other platform collections
+    // 7. Per-User Live VIP Support Messages
+    match /supportMessages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // Catch-all for platform collections & subcollections
     match /{document=**} {
       allow read, write: if true;
     }

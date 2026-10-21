@@ -164,12 +164,12 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
       </div>
 
       {/* Plinko Board Canvas & Buckets */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-6 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-2 sm:p-6 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
         <canvas
           ref={canvasRef}
           width={480}
           height={320}
-          className="rounded-xl bg-slate-900/60 border border-slate-800"
+          className="w-full max-w-[480px] h-auto aspect-[3/2] rounded-xl bg-slate-900/60 border border-slate-800"
         />
 
         {/* Bucket multiplier labels */}

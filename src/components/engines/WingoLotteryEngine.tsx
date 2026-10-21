@@ -147,7 +147,7 @@ export const WingoLotteryEngine: React.FC<Props> = ({ game, balance, bonusMultip
       </div>
 
       {/* Color Selection & History */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-6 space-y-6">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Color Buttons */}
         <div className="grid grid-cols-3 gap-3">
           <button

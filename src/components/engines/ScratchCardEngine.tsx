@@ -146,8 +146,8 @@ export const ScratchCardEngine: React.FC<Props> = ({ game, balance, bonusMultipl
       </div>
 
       {/* Card Scratch Window */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-8 flex flex-col items-center justify-center relative shadow-inner">
-        <div className="relative w-80 sm:w-96 h-80 sm:h-96 rounded-2xl overflow-hidden border-4 border-amber-500/40 shadow-2xl">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-3 sm:p-8 flex flex-col items-center justify-center relative shadow-inner">
+        <div className="relative w-[270px] sm:w-96 h-[270px] sm:h-96 rounded-2xl overflow-hidden border-4 border-amber-500/40 shadow-2xl">
           {/* Underlying Hidden Symbols (3x3 Grid) */}
           <div className="absolute inset-0 grid grid-cols-3 gap-2 p-3 bg-gradient-to-tr from-slate-900 via-amber-950 to-slate-900">
             {symbols.map((sym, idx) => (
