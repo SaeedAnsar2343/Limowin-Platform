@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -33,11 +33,18 @@ export const DiceGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
   const [selectedBet, setSelectedBet] = useState<string>(is7Up7Down ? 'up' : isCoinToss ? 'heads' : 'small');
   const [betAmount, setBetAmount] = useState(currencyConfig.minBet);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const rollIntervalRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (betAmount < currencyConfig.minBet || betAmount > currencyConfig.maxBet) {
       setBetAmount(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
+    };
   }, [currencyConfig]);
 
   const rollDice = () => {
@@ -47,11 +54,12 @@ export const DiceGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     sound.playDiceRoll();
 
     let rollCount = 0;
-    const interval = setInterval(() => {
+    rollIntervalRef.current = window.setInterval(() => {
+      if (!isMountedRef.current) return;
       setDice(Array.from({ length: numDice }).map(() => Math.floor(1 + Math.random() * (isCoinToss ? 2 : 6))));
       rollCount++;
       if (rollCount > 9) {
-        clearInterval(interval);
+        if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
         finalizeRoll();
       }
     }, 85);

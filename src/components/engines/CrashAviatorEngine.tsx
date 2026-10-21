@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
-import { Rocket, Trophy } from 'lucide-react';
+import { Rocket, Trophy, ShieldCheck, Zap } from 'lucide-react';
 
 interface Props {
   game: GameItem;
@@ -11,86 +11,59 @@ interface Props {
   onPlay: (bet: number, multiplier: number, isWin: boolean) => void;
 }
 
+interface SmokeParticle {
+  x: number;
+  y: number;
+  size: number;
+  alpha: number;
+  vx: number;
+  vy: number;
+}
+
 export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, onPlay }) => {
   const { currencyConfig, formatCurrency, calculateWinOutcome } = useApp();
   const [bet, setBet] = useState(currencyConfig.minBet);
-  const [multiplier, setMultiplier] = useState(1.0);
   const [gameState, setGameState] = useState<'idle' | 'flying' | 'crashed' | 'cashed'>('idle');
-  const [crashPoint, setCrashPoint] = useState(1.0);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const [autoCashout, setAutoCashout] = useState(false);
+  const [autoCashoutVal, setAutoCashoutVal] = useState<number>(2.0);
+  const [displayMultiplier, setDisplayMultiplier] = useState<number>(1.0);
+  const [history, setHistory] = useState<number[]>([1.45, 2.80, 1.12, 14.25, 3.10, 1.95, 5.40]);
 
-  // Dynamic craft detection based on actual game
+  // Craft identification
   const titleLower = (game.title + ' ' + game.id).toLowerCase();
   const isAviator = titleLower.includes('aviator');
   const isJetX = titleLower.includes('jet') || titleLower.includes('fighter');
   const isSpaceman = titleLower.includes('spaceman') || titleLower.includes('astronaut');
-  const vehicleEmoji = isAviator ? '🛩️' : isJetX ? '✈️' : isSpaceman ? '👨‍🚀' : '🚀';
-  const vehicleName = isAviator ? 'Propeller Airplane' : isJetX ? 'Supersonic Jet' : isSpaceman ? 'Spaceman Astronaut' : 'Cosmic Rocket';
-
-  useEffect(() => {
-    if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
-      setBet(currencyConfig.minBet);
-    }
-  }, [currencyConfig]);
+  const craftName = isAviator ? 'Aviator Monoplane' : isJetX ? 'Supersonic Jet' : isSpaceman ? 'Spaceman' : 'Cosmic Rocket';
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animRef = useRef<number | null>(null);
-  const multiplierRef = useRef(1.0);
+  const timerRef = useRef<number | null>(null);
+  const multiplierRef = useRef<number>(1.0);
+  const crashPointRef = useRef<number>(1.0);
+  const isMountedRef = useRef<boolean>(true);
+  const smokeParticlesRef = useRef<SmokeParticle[]>([]);
 
-  const startFlight = () => {
-    if (gameState === 'flying' || balance < bet) return;
-    setGameState('flying');
-    setLastWin(null);
-    multiplierRef.current = 1.0;
-    setMultiplier(1.0);
-    sound.playChip();
-    sound.playRocketThrust();
-
-    // Determine outcome using secret house edge
-    const outcome = calculateWinOutcome(bet, 5.0);
-    let cp = 1.0;
-
-    if (outcome.isWin) {
-      cp = Math.max(1.8, Number((outcome.multiplier * (1.15 + Math.random() * 0.3)).toFixed(2)));
-    } else {
-      cp = Number((1.05 + Math.random() * 0.28).toFixed(2));
-    }
-    setCrashPoint(cp);
-
-    const startTime = performance.now();
-
-    const loop = (now: number) => {
-      const elapsed = (now - startTime) / 1000;
-      // Exponential curve
-      const currentMult = 1.0 + Math.pow(elapsed * 0.9, 1.8);
-      multiplierRef.current = currentMult;
-      setMultiplier(currentMult);
-
-      if (currentMult >= cp) {
-        setGameState('crashed');
-        sound.playBounce();
-        onPlay(bet, 0, false);
-      } else {
-        animRef.current = requestAnimationFrame(loop);
-      }
-    };
-
-    animRef.current = requestAnimationFrame(loop);
-  };
-
-  const cashOut = () => {
-    if (gameState !== 'flying') return;
-    if (animRef.current) cancelAnimationFrame(animRef.current);
-    const winMult = multiplierRef.current;
-    setGameState('cashed');
-    const winAmt = bet * winMult * bonusMultiplier;
-    setLastWin(winAmt);
-    sound.playWin();
-    onPlay(bet, winMult, true);
-  };
-
-  // Draw 2D flight curve
   useEffect(() => {
+    isMountedRef.current = true;
+    if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
+      setBet(currencyConfig.minBet);
+    }
+    return () => {
+      isMountedRef.current = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [currencyConfig]);
+
+  // Draw initial canvas
+  useEffect(() => {
+    drawFrame(1.0, 'idle');
+  }, []);
+
+  // Primary High-Performance Canvas Renderer
+  const drawFrame = (currentMult: number, state: 'idle' | 'flying' | 'crashed' | 'cashed') => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -101,8 +74,8 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
 
     ctx.clearRect(0, 0, w, h);
 
-    // Background Grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    // 1. Dark Airfield Radar Grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
     for (let x = 0; x < w; x += 40) {
       ctx.beginPath();
@@ -117,58 +90,283 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       ctx.stroke();
     }
 
-    if (gameState === 'flying' || gameState === 'cashed' || gameState === 'crashed') {
-      const progress = Math.min((multiplier - 1.0) / 4.0, 1.0);
-      const startX = 40;
-      const startY = h - 40;
-      const endX = startX + progress * (w - 100);
-      const endY = startY - Math.pow(progress, 1.5) * (h - 100);
+    const startX = 35;
+    const startY = h - 35;
 
-      // Gradient under curve
-      const grad = ctx.createLinearGradient(0, startY, 0, endY);
-      grad.addColorStop(0, 'rgba(239, 68, 68, 0.0)');
-      grad.addColorStop(1, gameState === 'crashed' ? 'rgba(100, 116, 139, 0.2)' : isAviator ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.25)');
+    // Ground tarmac line
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, startY);
+    ctx.lineTo(w, startY);
+    ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.quadraticCurveTo(startX + (endX - startX) * 0.4, startY, endX, endY);
-      ctx.lineTo(endX, startY);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
+    if (state === 'idle') {
+      // Idle plane parked at runway
+      drawCraft(ctx, startX + 25, startY - 12, 0, false);
+      return;
+    }
 
-      // Curve Stroke
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.quadraticCurveTo(startX + (endX - startX) * 0.4, startY, endX, endY);
-      ctx.strokeStyle = gameState === 'crashed' ? '#94a3b8' : isAviator ? '#ef4444' : '#f59e0b';
-      ctx.lineWidth = 4;
-      ctx.stroke();
+    // Aerodynamic flight curve math
+    const normalizedProgress = Math.min((currentMult - 1.0) / 4.5, 1.0);
+    const endX = startX + normalizedProgress * (w - 110);
+    const endY = startY - Math.pow(normalizedProgress, 1.4) * (h - 90);
+    const angle = -Math.atan2(startY - endY, endX - startX) * 0.75;
 
-      // Vehicle Marker
+    // 2. Trailing Red Altitude Gradient underneath curve
+    const gradient = ctx.createLinearGradient(0, startY, 0, endY);
+    gradient.addColorStop(0, 'rgba(239, 68, 68, 0.0)');
+    gradient.addColorStop(1, state === 'crashed' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(239, 68, 68, 0.28)');
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(startX + (endX - startX) * 0.45, startY, endX, endY);
+    ctx.lineTo(endX, startY);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // 3. Glowing Flight Curve Line
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(startX + (endX - startX) * 0.45, startY, endX, endY);
+    ctx.strokeStyle = state === 'crashed' ? '#64748b' : '#ef4444';
+    ctx.lineWidth = 3.5;
+    ctx.shadowColor = state === 'crashed' ? 'transparent' : 'rgba(239, 68, 68, 0.8)';
+    ctx.shadowBlur = state === 'crashed' ? 0 : 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0; // reset
+
+    // 4. Update and render smoke particles
+    if (state === 'flying' && Math.random() < 0.6) {
+      smokeParticlesRef.current.push({
+        x: endX - 15,
+        y: endY + 4,
+        size: 3 + Math.random() * 4,
+        alpha: 0.6,
+        vx: -1.5 - Math.random() * 2,
+        vy: 0.5 - Math.random()
+      });
+    }
+
+    smokeParticlesRef.current.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.size += 0.2;
+      p.alpha -= 0.02;
+
+      if (p.alpha > 0) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${p.alpha * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    smokeParticlesRef.current = smokeParticlesRef.current.filter(p => p.alpha > 0);
+
+    // 5. Draw Craft or Explosion
+    if (state === 'crashed') {
       ctx.save();
       ctx.translate(endX, endY);
-      ctx.rotate(-Math.PI / 4);
+      ctx.font = '36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('💥', 0, 0);
+      ctx.restore();
+    } else {
+      drawCraft(ctx, endX, endY, angle, true);
+    }
+  };
+
+  // Vector Drawing of Aviator Propeller Airplane
+  const drawCraft = (ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, isPropellerSpinning: boolean) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    if (isAviator) {
+      // Crimson Monoplane Fuselage
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cockpit Windshield
+      ctx.fillStyle = '#93c5fd';
+      ctx.beginPath();
+      ctx.ellipse(6, -3, 6, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main Red Wings
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.moveTo(-4, -14);
+      ctx.lineTo(8, 0);
+      ctx.lineTo(-4, 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tail Fin
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(-20, 0);
+      ctx.lineTo(-26, -9);
+      ctx.lineTo(-22, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Nose Cone & Propeller
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(22, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (isPropellerSpinning) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(24, 0, 2, 12, performance.now() * 0.05, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else if (isJetX) {
+      // Supersonic Fighter Jet
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(24, 0);
+      ctx.lineTo(-18, -10);
+      ctx.lineTo(-12, 0);
+      ctx.lineTo(-18, 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Afterburner flame
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.moveTo(-12, -3);
+      ctx.lineTo(-24 - Math.random() * 8, 0);
+      ctx.lineTo(-12, 3);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Rocket
       ctx.font = '28px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(gameState === 'crashed' ? '💥' : vehicleEmoji, 0, 0);
-      ctx.restore();
+      ctx.fillText('🚀', 0, 0);
     }
-  }, [multiplier, gameState, isAviator, vehicleEmoji]);
+
+    ctx.restore();
+  };
+
+  // Start Flight Launch
+  const startFlight = () => {
+    if (gameState === 'flying' || balance < bet) return;
+    setGameState('flying');
+    setLastWin(null);
+    multiplierRef.current = 1.0;
+    setDisplayMultiplier(1.0);
+    smokeParticlesRef.current = [];
+    sound.playChip();
+    sound.playRocketThrust();
+
+    // Calculate crash point with house edge
+    const outcome = calculateWinOutcome(bet, 5.0);
+    let targetCrashPoint = 1.0;
+
+    if (outcome.isWin) {
+      targetCrashPoint = Math.max(1.85, Number((outcome.multiplier * (1.1 + Math.random() * 0.4)).toFixed(2)));
+    } else {
+      targetCrashPoint = Number((1.05 + Math.random() * 0.35).toFixed(2));
+    }
+
+    crashPointRef.current = targetCrashPoint;
+    const startTime = performance.now();
+    let lastUiUpdate = 0;
+
+    const loop = (now: number) => {
+      if (!isMountedRef.current) return;
+      const elapsed = (now - startTime) / 1000;
+      // Realistic parabolic multiplier acceleration
+      const curMult = 1.0 + Math.pow(elapsed * 0.95, 1.75);
+      multiplierRef.current = curMult;
+
+      // Throttle React state update to ~15fps for UI numbers while Canvas runs at full 60fps
+      if (now - lastUiUpdate > 65) {
+        setDisplayMultiplier(curMult);
+        lastUiUpdate = now;
+      }
+
+      // Check Auto-Cashout
+      if (autoCashout && curMult >= autoCashoutVal) {
+        cashOut();
+        return;
+      }
+
+      // Check Crash
+      if (curMult >= targetCrashPoint) {
+        multiplierRef.current = targetCrashPoint;
+        setDisplayMultiplier(targetCrashPoint);
+        setGameState('crashed');
+        drawFrame(targetCrashPoint, 'crashed');
+        sound.playBounce();
+        setHistory(prev => [Number(targetCrashPoint.toFixed(2)), ...prev.slice(0, 9)]);
+        onPlay(bet, 0, false);
+      } else {
+        drawFrame(curMult, 'flying');
+        animRef.current = requestAnimationFrame(loop);
+      }
+    };
+
+    animRef.current = requestAnimationFrame(loop);
+  };
+
+  // Instant Sub-Millisecond Cash Out
+  const cashOut = () => {
+    if (gameState !== 'flying') return;
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+
+    const winMult = Number(multiplierRef.current.toFixed(2));
+    setGameState('cashed');
+    drawFrame(winMult, 'cashed');
+
+    const winAmt = bet * winMult * bonusMultiplier;
+    setLastWin(winAmt);
+    setDisplayMultiplier(winMult);
+    sound.playWin();
+    setHistory(prev => [winMult, ...prev.slice(0, 9)]);
+    onPlay(bet, winMult, true);
+  };
 
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto select-none">
-      {/* Header */}
+      {/* Table Header with Recent Multipliers Ribbon */}
       <div className="w-full bg-slate-900 border border-slate-800 rounded-t-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-lg">
-            {vehicleEmoji}
+          <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center font-black text-lg">
+            ✈️
           </div>
           <div>
             <h3 className="text-white font-black text-sm sm:text-base leading-tight">{game.title}</h3>
-            <span className="text-[11px] text-slate-400">{vehicleName} Flight Multiplier • {game.provider}</span>
+            <span className="text-[11px] text-slate-400">{craftName} • High-Precision Real Flight</span>
           </div>
+        </div>
+
+        {/* Real Aviator Recent Multipliers Bar */}
+        <div className="flex items-center gap-1 overflow-x-auto max-w-[280px] sm:max-w-md bg-slate-950 p-1.5 rounded-xl border border-slate-800 no-scrollbar">
+          {history.map((h, i) => (
+            <span
+              key={i}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 whitespace-nowrap ${
+                h >= 10.0
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+                  : h >= 2.0
+                  ? 'bg-purple-900/40 text-purple-300 border border-purple-500/40'
+                  : 'bg-blue-950 text-blue-300 border border-blue-500/30'
+              }`}
+            >
+              {h.toFixed(2)}x
+            </span>
+          ))}
         </div>
 
         {lastWin !== null && lastWin > 0 && (
@@ -180,37 +378,74 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       </div>
 
       {/* Flight Canvas Window */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-3 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[260px] sm:min-h-[300px]">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-2 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[260px] sm:min-h-[300px]">
         <canvas
           ref={canvasRef}
           width={640}
           height={260}
-          className="w-full max-w-2xl h-[220px] sm:h-[260px] rounded-xl"
+          className="w-full max-w-2xl h-[220px] sm:h-[260px] rounded-xl bg-slate-950"
         />
 
         {/* Center Multiplier HUD */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
           <span
-            className={`text-5xl sm:text-7xl font-black tracking-tighter drop-shadow-2xl transition-colors ${
+            className={`text-6xl sm:text-7xl font-black tracking-tighter drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] transition-colors ${
               gameState === 'crashed'
-                ? 'text-rose-500'
+                ? 'text-rose-500 animate-pulse'
                 : gameState === 'cashed'
                 ? 'text-emerald-400'
                 : 'text-white'
             }`}
           >
-            {multiplier.toFixed(2)}x
+            {displayMultiplier.toFixed(2)}x
           </span>
-          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1 text-slate-400">
+          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1 text-slate-300 drop-shadow">
             {gameState === 'crashed'
               ? 'FLEW AWAY!'
               : gameState === 'cashed'
               ? 'CASHED OUT!'
               : gameState === 'flying'
               ? 'IN FLIGHT...'
-              : 'PLACE BET TO LAUNCH'}
+              : 'PLACE BET TO TAKE OFF'}
           </span>
         </div>
+      </div>
+
+      {/* Auto Cashout Strip */}
+      <div className="w-full bg-slate-950/80 border-x-4 border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setAutoCashout(!autoCashout)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
+              autoCashout
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 inline mr-1" />
+            <span>Auto Cash Out</span>
+          </button>
+          {autoCashout && (
+            <div className="flex items-center space-x-1">
+              {[1.5, 2.0, 3.0, 5.0].map(val => (
+                <button
+                  key={val}
+                  onClick={() => setAutoCashoutVal(val)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                    autoCashoutVal === val
+                      ? 'bg-emerald-500 text-slate-950'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {val.toFixed(1)}x
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className="text-[10px] text-slate-500 font-bold uppercase hidden sm:inline">
+          {autoCashout ? `Auto Cash at ${autoCashoutVal}x` : 'Manual Cashout Active'}
+        </span>
       </div>
 
       {/* Betting Console - 100% Mobile Fitting & Zero Overlap */}
@@ -237,14 +472,14 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
           ))}
         </div>
 
-        {/* Launch or Cashout button */}
+        {/* Launch or Instant Cashout Button */}
         {gameState === 'flying' ? (
           <button
             onClick={cashOut}
-            className="w-full sm:w-56 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center space-x-2 animate-pulse"
+            className="w-full sm:w-56 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center space-x-2 animate-pulse cursor-pointer transform active:scale-95"
           >
             <Trophy className="w-4 h-4" />
-            <span>CASH OUT {formatCurrency(bet * multiplier)}</span>
+            <span>CASH OUT {formatCurrency(bet * multiplierRef.current)}</span>
           </button>
         ) : (
           <button

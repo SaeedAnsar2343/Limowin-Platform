@@ -163,6 +163,10 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
   const [winLine, setWinLine] = useState<number | null>(null);
   const [autoSpin, setAutoSpin] = useState(false);
   const autoSpinRef = useRef(false);
+  const spinIntervalRef = useRef<number | null>(null);
+  const spinTimeoutRef = useRef<number | null>(null);
+  const autoSpinTimeoutRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   autoSpinRef.current = autoSpin;
 
@@ -178,9 +182,16 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
   ]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
       setBet(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (spinIntervalRef.current) clearInterval(spinIntervalRef.current);
+      if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
+      if (autoSpinTimeoutRef.current) clearTimeout(autoSpinTimeoutRef.current);
+    };
   }, [currencyConfig]);
 
   const getRandomSymbol = (): SymbolDef => {
@@ -204,8 +215,9 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     const intervalTime = turbo ? 40 : 80;
 
     // Spin animation ticks
-    const interval = setInterval(() => {
+    spinIntervalRef.current = window.setInterval(() => {
       sound.playReelTick();
+      if (!isMountedRef.current) return;
       setReels(prev =>
         prev.map(() => [
           getRandomSymbol().icon,
@@ -215,8 +227,9 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       );
     }, intervalTime);
 
-    setTimeout(() => {
-      clearInterval(interval);
+    spinTimeoutRef.current = window.setTimeout(() => {
+      if (spinIntervalRef.current) clearInterval(spinIntervalRef.current);
+      if (!isMountedRef.current) return;
 
       // Secret House Edge Outcome
       const outcome = calculateWinOutcome(bet, 20.0);
@@ -271,8 +284,8 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       onPlay(bet, winMultiplier, outcome.isWin);
 
       if (autoSpinRef.current) {
-        setTimeout(() => {
-          if (autoSpinRef.current) spin();
+        autoSpinTimeoutRef.current = window.setTimeout(() => {
+          if (isMountedRef.current && autoSpinRef.current) spin();
         }, 1200);
       }
     }, spinDuration);

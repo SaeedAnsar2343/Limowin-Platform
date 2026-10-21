@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -50,11 +50,18 @@ export const TeenPattiEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
   const [isPlaying, setIsPlaying] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [roundResult, setRoundResult] = useState<string>('');
+  const timerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
       setBet(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [currencyConfig]);
 
   const drawCard = (hidden = false): Card => {
@@ -153,7 +160,8 @@ export const TeenPattiEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
     sound.playCardFlip();
 
     // Showdown after delay
-    setTimeout(() => {
+    timerRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) return;
       // Reveal dealer cards
       const revealedDealer = dCards.map(c => ({ ...c, hidden: false }));
       setDealerHand(revealedDealer);

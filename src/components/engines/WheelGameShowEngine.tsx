@@ -37,11 +37,17 @@ export const WheelGameShowEngine: React.FC<Props> = ({ game, balance, bonusMulti
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rotationRef = useRef(0);
   const animRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
       setBet(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
   }, [currencyConfig]);
 
   const drawWheel = (angle: number) => {
@@ -158,6 +164,7 @@ export const WheelGameShowEngine: React.FC<Props> = ({ game, balance, bonusMulti
     const startTime = performance.now();
 
     const animate = (time: number) => {
+      if (!isMountedRef.current) return;
       const elapsed = time - startTime;
       const progress = Math.min(1, elapsed / duration);
       // Cubic ease out

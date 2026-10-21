@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -31,6 +31,8 @@ export const WingoLotteryEngine: React.FC<Props> = ({ game, balance, bonusMultip
     { period: '20261020997', number: 8, color: 'red', size: 'big' }
   ]);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
+  const resolveDrawRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (amount < currencyConfig.minBet || amount > currencyConfig.maxBet) {
@@ -39,17 +41,21 @@ export const WingoLotteryEngine: React.FC<Props> = ({ game, balance, bonusMultip
   }, [currencyConfig]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          resolveDraw();
+          if (isMountedRef.current) resolveDrawRef.current();
           return 30;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, [betValue, amount, balance]);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   const resolveDraw = () => {
     if (balance < amount) return;
@@ -119,6 +125,7 @@ export const WingoLotteryEngine: React.FC<Props> = ({ game, balance, bonusMultip
 
     onPlay(amount, outcome.multiplier, outcome.isWin);
   };
+  resolveDrawRef.current = resolveDraw;
 
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto p-4 select-none">

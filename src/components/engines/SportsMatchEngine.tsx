@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -28,11 +28,18 @@ export const SportsMatchEngine: React.FC<Props> = ({ game, balance, bonusMultipl
   });
   const [isSimulating, setIsSimulating] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const simTimeoutRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (stake < currencyConfig.minBet || stake > currencyConfig.maxBet) {
       setStake(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (simTimeoutRef.current) clearTimeout(simTimeoutRef.current);
+    };
   }, [currencyConfig]);
 
   useEffect(() => {
@@ -64,7 +71,8 @@ export const SportsMatchEngine: React.FC<Props> = ({ game, balance, bonusMultipl
     setLastWin(null);
     sound.playChip();
 
-    setTimeout(() => {
+    simTimeoutRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) return;
       setIsSimulating(false);
       // Secret outcome calculation
       const outcome = calculateWinOutcome(stake, selectedOdd.odds);

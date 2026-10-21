@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -45,11 +45,18 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [roundResult, setRoundResult] = useState<string>('');
   const [roadmap, setRoadmap] = useState<('P' | 'B' | 'T')[]>(['P', 'B', 'B', 'P', 'T', 'B', 'P']);
+  const timerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (chip < currencyConfig.minBet || chip > currencyConfig.maxBet) {
       setChip(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [currencyConfig]);
 
   const drawCard = (): Card => {
@@ -143,7 +150,8 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
     setBankerCards(bCards);
     sound.playCardFlip();
 
-    setTimeout(() => {
+    timerRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) return;
       setIsDealing(false);
       let winner: 'PLAYER' | 'BANKER' | 'TIE';
 

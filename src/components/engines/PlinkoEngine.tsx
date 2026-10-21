@@ -19,11 +19,18 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
   const [isDropping, setIsDropping] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
       setBet(currencyConfig.minBet);
     }
+    return () => {
+      isMountedRef.current = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
   }, [currencyConfig]);
 
   const dropBall = () => {
@@ -117,8 +124,9 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
       ctx.fill();
       ctx.shadowBlur = 0;
 
+      if (!isMountedRef.current) return;
       if (posY < canvas.height - 25) {
-        requestAnimationFrame(animate);
+        animRef.current = requestAnimationFrame(animate);
       } else {
         // Landed in bucket
         setIsDropping(false);
@@ -138,7 +146,7 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
       }
     };
 
-    requestAnimationFrame(animate);
+    animRef.current = requestAnimationFrame(animate);
   };
 
   return (
