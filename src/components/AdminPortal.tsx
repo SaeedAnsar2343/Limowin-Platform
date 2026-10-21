@@ -44,6 +44,10 @@ export const AdminPortal: React.FC = () => {
     deletePromotion,
     gameOverrides,
     updateGameBonus,
+    banners,
+    updateBanners,
+    addBanner,
+    deleteBanner,
     allUsers,
     toggleBlockUser,
     adjustUserBalance,
@@ -91,6 +95,19 @@ export const AdminPortal: React.FC = () => {
     turnover: 10,
     badge: 'EXCLUSIVE',
     category: 'All Games'
+  });
+
+  // Top banner management form
+  const [newBannerForm, setNewBannerForm] = useState({
+    badge: 'EXCLUSIVE VIP OFFER',
+    title: '200% FIRST DEPOSIT MATCH',
+    subtitle: 'Double your initial balance up to ₹50,000 / $2,500 + 200 Free Spins',
+    buttonText: 'Claim Bonus Now',
+    targetModal: 'deposit' as 'deposit' | 'register' | 'profile' | 'support',
+    desktopImageUrl: '',
+    mobileImageUrl: '',
+    bgGradient: 'from-blue-950 via-indigo-900 to-slate-950',
+    icon: '🎰'
   });
 
   // Balance adjustment modal
@@ -1284,17 +1301,362 @@ export const AdminPortal: React.FC = () => {
               </div>
             )}
 
-            {/* 11. MEDIA & IMAGES */}
+            {/* 11. TOP HERO BANNERS & MEDIA MANAGER */}
             {activeTab === 'media' && (
               <div className="space-y-6">
-                <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-xl font-black text-slate-900">Adaptive Media & Images Manager</h2>
-                  <p className="text-xs text-slate-500">
-                    Update hero banners, site logo, and promotional posters in real time.
-                  </p>
+                <div className="border-b border-slate-200 pb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Top Hero Banners &amp; Media Manager</h2>
+                    <p className="text-xs text-slate-500">
+                      Manage dynamic carousel banners, promotional slides, and images updated across all players in real time.
+                    </p>
+                  </div>
+
+                  <span className="text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 px-3 py-1 rounded-xl">
+                    {banners.length} Active Slides
+                  </span>
                 </div>
 
+                {/* Optimal Resolution Advice Guide */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-sm flex items-start space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 font-black text-base flex items-center justify-center shrink-0">
+                      🖥️
+                    </div>
+                    <div>
+                      <div className="text-xs font-black uppercase text-amber-400">Desktop Best Resolution</div>
+                      <div className="text-sm font-black text-white mt-0.5">1920 × 640 px (21:7 Wide Canvas)</div>
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                        Wide panoramic landscape view for ultra-sharp rendering on 1080p, 2K, and 4K displays.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-sm flex items-start space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-base flex items-center justify-center shrink-0">
+                      📱
+                    </div>
+                    <div>
+                      <div className="text-xs font-black uppercase text-emerald-400">Mobile Best Resolution</div>
+                      <div className="text-sm font-black text-white mt-0.5">800 × 600 px (4:3 High-DPI Mobile)</div>
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                        Compact portrait-friendly aspect ratio for iPhones, iPads, and Android smartphones.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Banners List & Editor */}
                 <div className="space-y-4">
+                  <h3 className="text-sm font-black text-slate-900 flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span>Live Carousel Slides ({banners.length})</span>
+                  </h3>
+
+                  <div className="space-y-4">
+                    {banners.map((b, idx) => (
+                      <div
+                        key={b.id || idx}
+                        className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3"
+                      >
+                        {/* Live Miniature Preview */}
+                        <div
+                          className={`w-full h-28 sm:h-32 rounded-xl p-4 text-white bg-gradient-to-r ${
+                            b.bgGradient || 'from-indigo-950 via-purple-900 to-slate-950'
+                          } flex items-center justify-between overflow-hidden relative shadow-inner`}
+                        >
+                          <div className="relative z-10 max-w-sm">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
+                              {b.badge}
+                            </span>
+                            <div className="text-base sm:text-lg font-black tracking-tight mt-1 line-clamp-1">
+                              {b.title}
+                            </div>
+                            <div className="text-xs text-slate-300 line-clamp-1 mt-0.5">
+                              {b.subtitle}
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-2 px-3 py-1 bg-amber-400 text-slate-950 rounded-lg text-[10px] font-black uppercase"
+                            >
+                              {b.buttonText || 'Claim Now'}
+                            </button>
+                          </div>
+                          <div className="text-4xl pr-4 relative z-10">{b.icon || '🎰'}</div>
+                        </div>
+
+                        {/* Editable inputs */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Headline Title</label>
+                            <input
+                              type="text"
+                              value={b.title}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, title: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Promo Badge</label>
+                            <input
+                              type="text"
+                              value={b.badge}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, badge: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Button Text</label>
+                            <input
+                              type="text"
+                              value={b.buttonText}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, buttonText: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Subtitle / Details</label>
+                            <input
+                              type="text"
+                              value={b.subtitle}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, subtitle: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">CTA Action Target</label>
+                            <select
+                              value={b.targetModal || 'deposit'}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, targetModal: e.target.value as any } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                            >
+                              <option value="deposit">Deposit Cashier Modal</option>
+                              <option value="register">Register / Sign Up Modal</option>
+                              <option value="profile">VIP Card &amp; Cashback</option>
+                              <option value="support">VIP Live Support</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                              Custom Desktop Image URL (1920×640)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. /assets/banners/welcome-bonus.png"
+                              value={b.desktopImageUrl || ''}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, desktopImageUrl: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                              Custom Mobile Image URL (800×600)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Optional mobile image"
+                              value={b.mobileImageUrl || ''}
+                              onChange={e => {
+                                const updated = banners.map(item =>
+                                  item.id === b.id ? { ...item, mobileImageUrl: e.target.value } : item
+                                );
+                                updateBanners(updated);
+                              }}
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-mono"
+                            />
+                          </div>
+
+                          <div className="flex items-center space-x-2 pt-3">
+                            <button
+                              type="button"
+                              onClick={() => deleteBanner(b.id)}
+                              className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold border border-rose-200 flex items-center space-x-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove Slide</span>
+                            </button>
+                            <span className="text-[10px] text-emerald-600 font-bold">
+                              ✓ Auto-saved to Firestore
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Create New Hero Banner Form */}
+                <div className="p-5 bg-slate-50 border border-slate-200 rounded-3xl space-y-4">
+                  <div className="flex items-center space-x-2 font-black text-sm text-slate-900">
+                    <Plus className="w-4 h-4 text-emerald-600" />
+                    <span>Add New Hero Promotional Banner</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Badge Text</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. VIP SPECIAL"
+                        value={newBannerForm.badge}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, badge: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Headline</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 100% WEEKEND RELOAD"
+                        value={newBannerForm.title}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, title: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Button Text</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Play Now"
+                        value={newBannerForm.buttonText}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, buttonText: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Subtitle</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Get up to ₹10,000 extra on every deposit"
+                        value={newBannerForm.subtitle}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, subtitle: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Target Action</label>
+                      <select
+                        value={newBannerForm.targetModal}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, targetModal: e.target.value as any })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      >
+                        <option value="deposit">Deposit Cashier</option>
+                        <option value="register">Sign Up Registration</option>
+                        <option value="profile">VIP Profile / Cashback</option>
+                        <option value="support">VIP Support Desk</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Theme Gradient Preset</label>
+                      <select
+                        value={newBannerForm.bgGradient}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, bgGradient: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      >
+                        <option value="from-blue-950 via-indigo-900 to-slate-950">Royal Blue &amp; Indigo</option>
+                        <option value="from-amber-950 via-slate-900 to-amber-900">Gold &amp; Champagne Luxury</option>
+                        <option value="from-emerald-950 via-slate-900 to-teal-900">Neon Emerald Cash</option>
+                        <option value="from-purple-950 via-slate-900 to-fuchsia-950">Cyber Neon Violet</option>
+                        <option value="from-rose-950 via-slate-900 to-red-950">Crimson VIP High-Roller</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">3D Emoji Icon</label>
+                      <select
+                        value={newBannerForm.icon}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, icon: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      >
+                        <option value="🎰">🎰 Slot Machine</option>
+                        <option value="👑">👑 Royal Crown</option>
+                        <option value="⚡">⚡ Lightning Bolt</option>
+                        <option value="🏆">🏆 Golden Trophy</option>
+                        <option value="💎">💎 Diamond</option>
+                        <option value="🎲">🎲 Casino Dice</option>
+                        <option value="🃏">🃏 Playing Cards</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Desktop Image (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="https://... or /assets/..."
+                        value={newBannerForm.desktopImageUrl}
+                        onChange={e => setNewBannerForm({ ...newBannerForm, desktopImageUrl: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addBanner(newBannerForm);
+                      setNewBannerForm({
+                        badge: 'SPECIAL PROMO',
+                        title: 'NEW VIP PROMOTION',
+                        subtitle: 'Play any game and earn instant bonus rewards',
+                        buttonText: 'Claim Bonus',
+                        targetModal: 'deposit',
+                        desktopImageUrl: '',
+                        mobileImageUrl: '',
+                        bgGradient: 'from-blue-950 via-indigo-900 to-slate-950',
+                        icon: '🎰'
+                      });
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider flex items-center space-x-2 transition-all shadow-md"
+                  >
+                    <Plus className="w-4 h-4 text-emerald-400" />
+                    <span>Publish New Banner Slide</span>
+                  </button>
+                </div>
+
+                {/* Site Logo Section */}
+                <div className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
+                  <div className="font-bold text-sm text-slate-900">Global Logo &amp; Branding</div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">Site Logo URL</label>
                     <input
@@ -1303,15 +1665,6 @@ export const AdminPortal: React.FC = () => {
                       onChange={e => setSiteForm({ ...siteForm, logoUrl: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                    {['welcome-bonus.png', 'vip-cashback.png', 'sports-accumulator.png', 'crypto-deposit.png', 'referral-affiliate.png'].map(b => (
-                      <div key={b} className="border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                        <img src={`/assets/banners/${b}`} alt="" className="w-full h-24 object-cover rounded-xl" />
-                        <div className="text-[11px] font-bold text-slate-700 mt-2 truncate">{b}</div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>

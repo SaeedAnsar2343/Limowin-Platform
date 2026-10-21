@@ -354,3 +354,28 @@ export const subscribeToChatMessages = (callback: (messages: any[]) => void) => 
     return () => {};
   }
 };
+
+// 11. Top Banner Slides
+export const syncBannersToFirestore = async (banners: any[]) => {
+  try {
+    const ref = doc(db, 'settings', 'heroBanners');
+    await setDoc(ref, { slides: banners, updatedAt: new Date().toISOString() }, { merge: true });
+    return true;
+  } catch (error) {
+    console.warn('Firestore syncBanners fallback:', error);
+    return false;
+  }
+};
+
+export const getBannersFromFirestore = async () => {
+  try {
+    const ref = doc(db, 'settings', 'heroBanners');
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data()?.slides) {
+      return snap.data().slides;
+    }
+  } catch (error) {
+    console.warn('Firestore getBanners fallback:', error);
+  }
+  return null;
+};

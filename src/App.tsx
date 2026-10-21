@@ -11,6 +11,7 @@ import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { LiveSupportModal } from './components/LiveSupportModal';
 import { AdminPortal } from './components/AdminPortal';
 import { PolicyPages } from './components/PolicyPages';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { CheckCircle2, AlertCircle, Info, Trophy, Headphones } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
@@ -19,7 +20,7 @@ export const AppContent: React.FC = () => {
   const isSuperAdmin = user && (user.role === 'admin' || user.email?.toLowerCase() === 'saeed.samadelivery@gmail.com');
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 pb-20 md:pb-0 ${
       theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Global Navigation */}
@@ -68,14 +69,17 @@ export const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Floating 24/7 Live Support Button */}
+      {/* Floating 24/7 Live Support Button (Desktop Only - mobile has sticky bottom nav) */}
       <button
         onClick={() => setActiveModal('support')}
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2 font-black text-xs uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 border border-yellow-300"
+        className="hidden md:flex fixed bottom-6 right-6 z-40 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 px-4 py-3 rounded-2xl shadow-xl items-center space-x-2 font-black text-xs uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 border border-yellow-300"
       >
         <Headphones className="w-4 h-4 fill-current" />
-        <span className="hidden sm:inline">24/7 VIP Support</span>
+        <span>24/7 VIP Support</span>
       </button>
+
+      {/* Mobile Bottom Navigation Bar (Sticky for Smartphone & Mobile Gaming) */}
+      <MobileBottomNav />
 
       {/* Global Modals */}
       <PlayModal />

@@ -66,7 +66,7 @@ export const GameGrid: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+    <div id="games-section" className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
       {/* 1. HOT GAMES CAROUSEL (Matching User Screenshot 2) */}
       {!searchQuery && selectedCategory === 'all' && (
         <section className="space-y-4">

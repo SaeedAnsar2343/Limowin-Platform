@@ -153,59 +153,61 @@ export const CustomerProfileModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
-        {/* Top Header Bar */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-800 p-6 text-white flex flex-wrap items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 p-0.5 shadow-lg">
-              <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center text-2xl font-black text-amber-400">
-                {user.name.charAt(0)}
+        {/* Top Header Bar - Fully Responsive for Mobile & Desktop */}
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-800 p-4 sm:p-6 text-white shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 p-0.5 shadow-lg shrink-0">
+                <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center text-xl sm:text-2xl font-black text-amber-400">
+                  {user.name.charAt(0)}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-black">{user.name}</h2>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">
-                  {user.vipLevel}
-                </span>
-                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                  <UserCheck className="w-3 h-3 text-emerald-400 inline" />
-                  <span>KYC Level 1</span>
-                </span>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-1.5 flex-wrap">
+                  <h2 className="text-base sm:text-xl font-black truncate">{user.name}</h2>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow shrink-0">
+                    {user.vipLevel}
+                  </span>
+                  <span className="hidden sm:inline-flex text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-full items-center space-x-1">
+                    <UserCheck className="w-3 h-3 text-emerald-400 inline" />
+                    <span>KYC Level 1</span>
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">
+                  {user.email} • {currency === 'INR' ? '🇮🇳 India (INR)' : '🌐 International (USD)'}
+                </p>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {user.email} • ID: {user.id} • Region: {currency === 'INR' ? '🇮🇳 India (INR)' : '🌐 International (USD)'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            {/* Real Balance */}
-            <div className="bg-slate-950/80 border border-slate-700/80 px-4 py-2 rounded-2xl text-right shadow-inner">
-              <span className="text-[10px] text-slate-400 font-bold block leading-none">REAL CASH</span>
-              <span className="text-xl font-black text-emerald-400 leading-tight">
-                {formatCurrency(user.balance)}
-              </span>
-            </div>
-
-            {/* Bonus Balance */}
-            <div className="bg-slate-950/80 border border-slate-700/80 px-4 py-2 rounded-2xl text-right shadow-inner">
-              <span className="text-[10px] text-slate-400 font-bold block leading-none">BONUS FUNDS</span>
-              <span className="text-xl font-black text-yellow-400 leading-tight">
-                {formatCurrency(user.bonusBalance)}
-              </span>
             </div>
 
             <button
               onClick={() => setActiveModal(null)}
-              className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+              aria-label="Close Modal"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Real Cash & Bonus Balances: Responsive 2-column grid on mobile, spacious inline on desktop */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3 pt-3 border-t border-slate-800/80">
+            <div className="bg-slate-950/80 border border-slate-700/80 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl shadow-inner">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block leading-none">REAL CASH</span>
+              <span className="text-base sm:text-xl font-black text-emerald-400 leading-tight">
+                {formatCurrency(user.balance)}
+              </span>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-700/80 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl shadow-inner">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block leading-none">BONUS FUNDS</span>
+              <span className="text-base sm:text-xl font-black text-yellow-400 leading-tight">
+                {formatCurrency(user.bonusBalance)}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-slate-50 border-b border-slate-200 px-6 flex space-x-2 overflow-x-auto shrink-0">
+        {/* Navigation Tabs - Horizontal Scroll Touch-Friendly */}
+        <div className="bg-slate-50 border-b border-slate-200 px-3 sm:px-6 flex space-x-1.5 sm:space-x-2 overflow-x-auto shrink-0 no-scrollbar">
           {[
             { id: 'deposit', label: 'Deposit Money', icon: ArrowDownCircle },
             { id: 'withdraw', label: 'Withdraw Funds', icon: ArrowUpCircle },
@@ -220,13 +222,13 @@ export const CustomerProfileModal: React.FC = () => {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id as any)}
-                className={`py-3.5 px-4 font-black text-xs border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
+                className={`py-3 sm:py-3.5 px-3 sm:px-4 font-black text-xs border-b-2 flex items-center space-x-1.5 sm:space-x-2 transition-all whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'border-amber-500 text-slate-900 bg-white rounded-t-xl shadow-sm'
+                    ? 'border-amber-500 text-slate-900 bg-white rounded-t-xl shadow-xs'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-amber-500' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-amber-500' : 'text-slate-400'}`} />
                 <span>{t.label}</span>
               </button>
             );
@@ -246,7 +248,7 @@ export const CustomerProfileModal: React.FC = () => {
               </div>
 
               {/* Method Pickers: If INR, default is UPI Pay, second is GPay. If USD, default is TRC20 */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {currency === 'INR' ? (
                   <>
                     <button
@@ -611,7 +613,7 @@ export const CustomerProfileModal: React.FC = () => {
               )}
 
               {/* Method Selection (INR => UPI Pay default, GPay second. USD => Crypto default) */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {currency === 'INR' ? (
                   <>
                     <button

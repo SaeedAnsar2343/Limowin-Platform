@@ -34,7 +34,9 @@ import {
   syncDepositBonusConfigToFirestore,
   getDepositBonusConfigFromFirestore,
   saveChatMessageToFirestore,
-  subscribeToChatMessages
+  subscribeToChatMessages,
+  syncBannersToFirestore,
+  getBannersFromFirestore
 } from '../firebase';
 import {
   signInWithPopup,
@@ -116,6 +118,21 @@ export interface DepositBonusRule {
 export interface DepositBonusConfig {
   inr: DepositBonusRule;
   usd: DepositBonusRule;
+}
+
+export interface BannerSlide {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  targetModal: 'deposit' | 'register' | 'profile' | 'support' | null;
+  desktopImageUrl?: string;
+  mobileImageUrl?: string;
+  bgGradient: string;
+  icon: string;
+  active: boolean;
+  order: number;
 }
 
 export interface PromotionItem {
@@ -226,6 +243,7 @@ interface AppContextType {
   depositBonusConfig: DepositBonusConfig;
   promotions: PromotionItem[];
   gameOverrides: Record<string, { bonusMultiplier: number; customRtp?: number }>;
+  banners: BannerSlide[];
   user: UserProfile | null;
   allUsers: UserProfile[];
   allDeposits: DepositRequest[];
@@ -291,6 +309,9 @@ interface AppContextType {
   rejectWithdrawal: (id: string, reason?: string) => Promise<boolean>;
   toggleBlockUser: (userId: string, currentStatus: 'active' | 'blocked') => Promise<boolean>;
   adjustUserBalance: (userId: string, balance: number, bonusBalance: number) => Promise<boolean>;
+  updateBanners: (banners: BannerSlide[]) => Promise<boolean>;
+  addBanner: (banner: Partial<BannerSlide>) => Promise<boolean>;
+  deleteBanner: (id: string) => Promise<boolean>;
 }
 
 const defaultSettings: SiteSettings = {
@@ -417,6 +438,65 @@ const defaultAdmin: UserProfile = {
   createdAt: '2026-01-01T00:00:00Z'
 };
 
+const defaultBanners: BannerSlide[] = [
+  {
+    id: 'banner-1',
+    badge: 'EXCLUSIVE NEW MEMBER OFFER',
+    title: '200% FIRST DEPOSIT BONUS',
+    subtitle: 'Claim up to ₹25,000 / $2,500 + 200 Free Spins on Top 3D Slots and Live Tables',
+    buttonText: 'Claim Bonus Now',
+    targetModal: 'deposit',
+    desktopImageUrl: '',
+    mobileImageUrl: '',
+    bgGradient: 'from-blue-950 via-indigo-900 to-slate-950',
+    icon: '🎰',
+    active: true,
+    order: 1
+  },
+  {
+    id: 'banner-2',
+    badge: 'DAILY VIP REWARDS',
+    title: '15% DAILY CASHBACK & REBATES',
+    subtitle: 'Play Live Dealer, Dragon Tiger & Roulette with zero-turnover instant cashback payouts',
+    buttonText: 'Join VIP Club',
+    targetModal: 'profile',
+    desktopImageUrl: '',
+    mobileImageUrl: '',
+    bgGradient: 'from-amber-950 via-slate-900 to-amber-900',
+    icon: '👑',
+    active: true,
+    order: 2
+  },
+  {
+    id: 'banner-3',
+    badge: 'LIGHTNING SPEED',
+    title: 'INSTANT UPI & USDT WITHDRAWALS',
+    subtitle: 'Automated 60-second processing directly to your Bank, UPI ID or TRC-20 Wallet',
+    buttonText: 'Deposit with Bonus',
+    targetModal: 'deposit',
+    desktopImageUrl: '',
+    mobileImageUrl: '',
+    bgGradient: 'from-emerald-950 via-slate-900 to-teal-900',
+    icon: '⚡',
+    active: true,
+    order: 3
+  },
+  {
+    id: 'banner-4',
+    badge: 'AFFILIATE COMMISSIONS',
+    title: 'UNLIMITED 30% LIFETIME REVENUE SHARE',
+    subtitle: 'Earn continuous passive income on every single friend and referral you invite to Limowin',
+    buttonText: 'Get Referral Link',
+    targetModal: 'profile',
+    desktopImageUrl: '',
+    mobileImageUrl: '',
+    bgGradient: 'from-purple-950 via-slate-900 to-fuchsia-950',
+    icon: '🏆',
+    active: true,
+    order: 4
+  }
+];
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -449,6 +529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
   const [gameOverrides, setGameOverrides] = useState<Record<string, { bonusMultiplier: number; customRtp?: number }>>({});
+  const [banners, setBanners] = useState<BannerSlide[]>(defaultBanners);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([defaultUser, defaultAdmin]);
   const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
@@ -565,6 +646,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getGameOverridesFromFirestore().then(remoteOverrides => {
       if (remoteOverrides) {
         setGameOverrides(remoteOverrides as any);
+      }
+    });
+
+    getBannersFromFirestore().then(remoteBanners => {
+      if (remoteBanners && remoteBanners.length > 0) {
+        setBanners(remoteBanners as BannerSlide[]);
       }
     });
 
@@ -1307,6 +1394,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const updateBanners = async (newBanners: BannerSlide[]) => {
+    setBanners(newBanners);
+    await syncBannersToFirestore(newBanners);
+    showToast('Hero banner slides saved successfully!', 'success');
+    return true;
+  };
+
+  const addBanner = async (newBanner: Partial<BannerSlide>) => {
+    const slide: BannerSlide = {
+      id: 'banner-' + Date.now(),
+      badge: newBanner.badge || 'SPECIAL OFFER',
+      title: newBanner.title || 'Exclusive Promotion',
+      subtitle: newBanner.subtitle || 'Play 200+ 3D games and earn real cash',
+      buttonText: newBanner.buttonText || 'Claim Now',
+      targetModal: newBanner.targetModal || 'deposit',
+      desktopImageUrl: newBanner.desktopImageUrl || '',
+      mobileImageUrl: newBanner.mobileImageUrl || '',
+      bgGradient: newBanner.bgGradient || 'from-indigo-950 via-purple-900 to-slate-950',
+      icon: newBanner.icon || '🎰',
+      active: true,
+      order: banners.length + 1
+    };
+    const updated = [...banners, slide];
+    setBanners(updated);
+    await syncBannersToFirestore(updated);
+    showToast('New hero banner slide added!', 'success');
+    return true;
+  };
+
+  const deleteBanner = async (id: string) => {
+    const updated = banners.filter(b => b.id !== id);
+    setBanners(updated);
+    await syncBannersToFirestore(updated);
+    showToast('Banner slide deleted.', 'info');
+    return true;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1315,6 +1439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         depositBonusConfig,
         promotions,
         gameOverrides,
+        banners,
         user,
         allUsers,
         allDeposits,
@@ -1367,7 +1492,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveWithdrawal,
         rejectWithdrawal,
         toggleBlockUser,
-        adjustUserBalance
+        adjustUserBalance,
+        updateBanners,
+        addBanner,
+        deleteBanner
       }}
     >
       {children}

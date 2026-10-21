@@ -102,10 +102,10 @@ export const Navbar: React.FC = () => {
             </button>
           )}
 
-          {/* Customer Support Trigger */}
+          {/* Customer Support Trigger (Desktop - mobile has bottom nav) */}
           <button
             onClick={() => setActiveModal('support')}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all border border-slate-200"
+            className="hidden sm:flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all border border-slate-200"
             title="Live Customer Support"
           >
             <Headphones className="w-4 h-4 text-amber-600" />
