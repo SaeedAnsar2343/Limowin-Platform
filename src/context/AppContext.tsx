@@ -261,7 +261,7 @@ interface AppContextType {
   // Auth
   loginUser: (email: string, password?: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
-  loginWithPhone: (phoneNumber: string, otp: string, name?: string) => Promise<boolean>;
+  loginWithPhone: (phoneNumber: string, email: string, otp: string, name?: string) => Promise<boolean>;
   registerUser: (email: string, pass: string, name: string, phone: string, refCode?: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
   logout: () => void;
@@ -774,24 +774,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  // Login / Signup with Mobile Number
-  const loginWithPhone = async (phoneNumber: string, otp: string, name?: string) => {
+  // Login / Signup with Mobile Number and Email (Verified with OTP)
+  const loginWithPhone = async (phoneNumber: string, email: string, otp: string, name?: string) => {
     const cleanPhone = phoneNumber.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
     if (!cleanPhone || cleanPhone.length < 7) {
       showToast('Please enter a valid mobile number', 'error');
       return false;
     }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      showToast('Please enter a valid email address', 'error');
+      return false;
+    }
     if (!otp || otp.length < 4) {
-      showToast('Please enter the verification code sent to your phone', 'error');
+      showToast('Please enter the 6-digit email verification code', 'error');
       return false;
     }
 
-    let found = allUsers.find(u => u.phone === cleanPhone);
+    // Strict 1:1 rule: 1 account per mobile number AND 1 account per email
+    const userWithSameEmail = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+    const userWithSamePhone = allUsers.find(u => u.phone === cleanPhone);
+
+    if (userWithSameEmail && userWithSameEmail.phone && userWithSameEmail.phone !== cleanPhone) {
+      showToast('This email is already linked to another mobile number. Only 1 account per mobile & email allowed.', 'error');
+      return false;
+    }
+
+    if (userWithSamePhone && userWithSamePhone.email.toLowerCase() !== cleanEmail) {
+      showToast('This mobile number is already registered with another email account. Only 1 account per mobile & email allowed.', 'error');
+      return false;
+    }
+
+    let found = userWithSameEmail || userWithSamePhone;
+
     if (!found) {
       const newUser: UserProfile = {
-        id: 'usr-phone-' + Date.now(),
-        name: name || `VIP Member (${cleanPhone.slice(-4)})`,
-        email: `${cleanPhone.replace(/[^0-9]/g, '')}@limowin.player`,
+        id: 'usr-vip-' + Date.now(),
+        name: name || cleanEmail.split('@')[0],
+        email: cleanEmail,
         phone: cleanPhone,
         role: 'player',
         balance: currency === 'INR' ? 500.00 : 10.00,
@@ -814,6 +835,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await syncUserToFirestore(newUser);
       setAllUsers(prev => [newUser, ...prev]);
       found = newUser;
+    } else {
+      if (!found.phone) {
+        found.phone = cleanPhone;
+        await syncUserToFirestore(found);
+      }
     }
 
     if (found.status === 'blocked') {
@@ -822,15 +848,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setUser(found);
-    showToast(`Signed in with Mobile Number ${cleanPhone}!`, 'success');
+    showToast(`Email verified! Welcome to Limowin, ${found.name}.`, 'success');
     setActiveModal(null);
     return true;
   };
 
-  // Register with Email and Required Phone
+  // Register with Email and Required Phone (Strict 1:1 rule)
   const registerUser = async (email: string, pass: string, name: string, phone: string, refCode?: string) => {
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
     const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
+
+    // 1 account per email and 1 account per phone verification
+    if (allUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
+      showToast('This email address is already registered. Please sign in.', 'error');
+      return false;
+    }
+    if (cleanPhone && allUsers.some(u => u.phone === cleanPhone)) {
+      showToast('This mobile number is already linked to an existing account.', 'error');
+      return false;
+    }
 
     try {
       const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
