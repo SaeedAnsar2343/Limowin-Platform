@@ -193,11 +193,11 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
         </div>
       </div>
 
-      {/* Betting Console */}
-      <div className="w-full bg-slate-900 border-4 border-t-0 border-slate-800 rounded-b-2xl p-4 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
-        {/* Chips */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-bold text-slate-400 uppercase mr-1">Bet:</span>
+      {/* Betting Console - 100% Mobile Fitting & Zero Overlap */}
+      <div className="w-full bg-slate-900 border-4 border-t-0 border-slate-800 rounded-b-2xl p-3 sm:p-4 shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Bet presets: horizontally scrollable, compact, zero overlap */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 no-scrollbar shrink-0">
+          <span className="text-xs font-black text-slate-400 uppercase mr-1 shrink-0">Bet:</span>
           {currencyConfig.betPresets.slice(0, 5).map(val => (
             <button
               key={val}
@@ -206,13 +206,13 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
                 sound.playChip();
               }}
               disabled={isDropping}
-              className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all ${
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-black text-xs shrink-0 whitespace-nowrap transition-all ${
                 bet === val
-                  ? 'bg-amber-500 text-slate-950 shadow-md scale-105'
+                  ? 'bg-amber-500 text-slate-950 shadow-md scale-102 ring-2 ring-yellow-400'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              {formatCurrency(val)}
+              {formatCurrency(val).replace('.00', '')}
             </button>
           ))}
         </div>
@@ -221,7 +221,7 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
         <button
           onClick={dropBall}
           disabled={isDropping || balance < bet}
-          className={`w-full sm:w-48 py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
+          className={`w-full sm:w-48 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
             isDropping
               ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
               : balance < bet
@@ -229,7 +229,7 @@ export const PlinkoEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, 
               : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/25'
           }`}
         >
-          <Play className="w-5 h-5 fill-current" />
+          <Play className="w-4 h-4 fill-current" />
           <span>{isDropping ? 'Dropping...' : balance < bet ? 'Low Balance' : `DROP ${formatCurrency(bet)}`}</span>
         </button>
       </div>

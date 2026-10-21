@@ -298,10 +298,10 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
           </button>
         </div>
 
-        {/* Chip row & Deal */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold text-slate-400 uppercase mr-1">Chip:</span>
+        {/* Chip row & Deal - 100% Mobile Fitting & Zero Overlap */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 no-scrollbar shrink-0">
+            <span className="text-xs font-black text-slate-400 uppercase mr-1 shrink-0">Bet:</span>
             {currencyConfig.betPresets.slice(0, 5).map(val => (
               <button
                 key={val}
@@ -310,13 +310,13 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
                   sound.playChip();
                 }}
                 disabled={isDealing}
-                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-black text-xs shrink-0 whitespace-nowrap transition-all ${
                   chip === val
-                    ? 'bg-amber-500 text-slate-950 shadow-md scale-105'
+                    ? 'bg-amber-500 text-slate-950 shadow-md scale-102 ring-2 ring-yellow-400'
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                 }`}
               >
-                {formatCurrency(val)}
+                {formatCurrency(val).replace('.00', '')}
               </button>
             ))}
           </div>
@@ -324,7 +324,7 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
           <button
             onClick={dealRound}
             disabled={isDealing || balance < chip}
-            className={`w-full sm:w-48 py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
+            className={`w-full sm:w-48 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
               isDealing
                 ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 : balance < chip
@@ -332,7 +332,7 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
                 : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/25'
             }`}
           >
-            <Shuffle className="w-5 h-5" />
+            <Shuffle className="w-4 h-4" />
             <span>
               {isDealing ? 'Dealing...' : balance < chip ? 'Low Balance' : `DEAL ${formatCurrency(chip)}`}
             </span>

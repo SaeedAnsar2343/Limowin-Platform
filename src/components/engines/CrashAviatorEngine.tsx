@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
-import { Rocket, Trophy, Users } from 'lucide-react';
+import { Rocket, Trophy } from 'lucide-react';
 
 interface Props {
   game: GameItem;
@@ -18,6 +18,14 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
   const [gameState, setGameState] = useState<'idle' | 'flying' | 'crashed' | 'cashed'>('idle');
   const [crashPoint, setCrashPoint] = useState(1.0);
   const [lastWin, setLastWin] = useState<number | null>(null);
+
+  // Dynamic craft detection based on actual game
+  const titleLower = (game.title + ' ' + game.id).toLowerCase();
+  const isAviator = titleLower.includes('aviator');
+  const isJetX = titleLower.includes('jet') || titleLower.includes('fighter');
+  const isSpaceman = titleLower.includes('spaceman') || titleLower.includes('astronaut');
+  const vehicleEmoji = isAviator ? '🛩️' : isJetX ? '✈️' : isSpaceman ? '👨‍🚀' : '🚀';
+  const vehicleName = isAviator ? 'Propeller Airplane' : isJetX ? 'Supersonic Jet' : isSpaceman ? 'Spaceman Astronaut' : 'Cosmic Rocket';
 
   useEffect(() => {
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
@@ -43,10 +51,8 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
     let cp = 1.0;
 
     if (outcome.isWin) {
-      // Let the rocket fly high enough for player to cash out profitably
       cp = Math.max(1.8, Number((outcome.multiplier * (1.15 + Math.random() * 0.3)).toFixed(2)));
     } else {
-      // Early crash
       cp = Number((1.05 + Math.random() * 0.28).toFixed(2));
     }
     setCrashPoint(cp);
@@ -79,6 +85,7 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
     setGameState('cashed');
     const winAmt = bet * winMult * bonusMultiplier;
     setLastWin(winAmt);
+    sound.playWin();
     onPlay(bet, winMult, true);
   };
 
@@ -120,7 +127,7 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       // Gradient under curve
       const grad = ctx.createLinearGradient(0, startY, 0, endY);
       grad.addColorStop(0, 'rgba(239, 68, 68, 0.0)');
-      grad.addColorStop(1, gameState === 'crashed' ? 'rgba(100, 116, 139, 0.2)' : 'rgba(245, 158, 11, 0.25)');
+      grad.addColorStop(1, gameState === 'crashed' ? 'rgba(100, 116, 139, 0.2)' : isAviator ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.25)');
 
       ctx.beginPath();
       ctx.moveTo(startX, startY);
@@ -134,38 +141,38 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.quadraticCurveTo(startX + (endX - startX) * 0.4, startY, endX, endY);
-      ctx.strokeStyle = gameState === 'crashed' ? '#94a3b8' : '#f59e0b';
+      ctx.strokeStyle = gameState === 'crashed' ? '#94a3b8' : isAviator ? '#ef4444' : '#f59e0b';
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Rocket Marker
+      // Vehicle Marker
       ctx.save();
       ctx.translate(endX, endY);
       ctx.rotate(-Math.PI / 4);
-      ctx.font = '24px sans-serif';
+      ctx.font = '28px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(gameState === 'crashed' ? '💥' : '🚀', 0, 0);
+      ctx.fillText(gameState === 'crashed' ? '💥' : vehicleEmoji, 0, 0);
       ctx.restore();
     }
-  }, [multiplier, gameState]);
+  }, [multiplier, gameState, isAviator, vehicleEmoji]);
 
   return (
-    <div className="flex flex-col items-center w-full max-w-4xl mx-auto p-4 select-none">
+    <div className="flex flex-col items-center w-full max-w-4xl mx-auto select-none">
       {/* Header */}
-      <div className="w-full bg-slate-900 border border-slate-800 rounded-t-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black">
-            🚀
+      <div className="w-full bg-slate-900 border border-slate-800 rounded-t-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-lg">
+            {vehicleEmoji}
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">{game.title}</h3>
-            <span className="text-xs text-slate-400">Crash Multiplier Engine • {game.provider}</span>
+            <h3 className="text-white font-black text-sm sm:text-base leading-tight">{game.title}</h3>
+            <span className="text-[11px] text-slate-400">{vehicleName} Flight Multiplier • {game.provider}</span>
           </div>
         </div>
 
         {lastWin !== null && lastWin > 0 && (
-          <div className="bg-emerald-900 text-emerald-300 px-4 py-1.5 rounded-full font-black text-sm flex items-center space-x-2 animate-bounce shadow-lg">
+          <div className="bg-emerald-900 text-emerald-300 px-3.5 py-1 rounded-full font-black text-xs sm:text-sm flex items-center space-x-1.5 animate-bounce shadow-lg">
             <Trophy className="w-4 h-4 text-yellow-400" />
             <span>WIN +{formatCurrency(lastWin)}!</span>
           </div>
@@ -173,18 +180,18 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       </div>
 
       {/* Flight Canvas Window */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-3 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[260px] sm:min-h-[300px]">
         <canvas
           ref={canvasRef}
           width={640}
           height={260}
-          className="w-full max-w-2xl h-[260px] rounded-xl"
+          className="w-full max-w-2xl h-[220px] sm:h-[260px] rounded-xl"
         />
 
         {/* Center Multiplier HUD */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none">
           <span
-            className={`text-6xl sm:text-7xl font-black tracking-tighter drop-shadow-2xl transition-colors ${
+            className={`text-5xl sm:text-7xl font-black tracking-tighter drop-shadow-2xl transition-colors ${
               gameState === 'crashed'
                 ? 'text-rose-500'
                 : gameState === 'cashed'
@@ -194,7 +201,7 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
           >
             {multiplier.toFixed(2)}x
           </span>
-          <span className="text-xs font-bold uppercase tracking-widest mt-1 text-slate-400">
+          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1 text-slate-400">
             {gameState === 'crashed'
               ? 'FLEW AWAY!'
               : gameState === 'cashed'
@@ -206,11 +213,11 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
         </div>
       </div>
 
-      {/* Betting Console */}
-      <div className="w-full bg-slate-900 border-4 border-t-0 border-slate-800 rounded-b-2xl p-4 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
-        {/* Bet presets */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-bold text-slate-400 uppercase mr-1">Bet:</span>
+      {/* Betting Console - 100% Mobile Fitting & Zero Overlap */}
+      <div className="w-full bg-slate-900 border-4 border-t-0 border-slate-800 rounded-b-2xl p-3 sm:p-4 shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Bet presets: horizontally scrollable, compact, zero overlap */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 no-scrollbar shrink-0">
+          <span className="text-xs font-black text-slate-400 uppercase mr-1 shrink-0">Bet:</span>
           {currencyConfig.betPresets.slice(0, 5).map(val => (
             <button
               key={val}
@@ -219,13 +226,13 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
                 sound.playChip();
               }}
               disabled={gameState === 'flying'}
-              className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all ${
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-black text-xs shrink-0 whitespace-nowrap transition-all ${
                 bet === val
-                  ? 'bg-amber-500 text-slate-950 shadow-md scale-105'
+                  ? 'bg-amber-500 text-slate-950 shadow-md scale-102 ring-2 ring-yellow-400'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              {formatCurrency(val)}
+              {formatCurrency(val).replace('.00', '')}
             </button>
           ))}
         </div>
@@ -234,22 +241,22 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
         {gameState === 'flying' ? (
           <button
             onClick={cashOut}
-            className="w-full sm:w-56 py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center space-x-2 animate-pulse"
+            className="w-full sm:w-56 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center space-x-2 animate-pulse"
           >
-            <Trophy className="w-5 h-5" />
+            <Trophy className="w-4 h-4" />
             <span>CASH OUT {formatCurrency(bet * multiplier)}</span>
           </button>
         ) : (
           <button
             onClick={startFlight}
             disabled={balance < bet}
-            className={`w-full sm:w-48 py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
+            className={`w-full sm:w-48 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
               balance < bet
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/25'
             }`}
           >
-            <Rocket className="w-5 h-5" />
+            <Rocket className="w-4 h-4" />
             <span>{balance < bet ? 'Low Balance' : `BET ${formatCurrency(bet)}`}</span>
           </button>
         )}

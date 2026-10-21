@@ -213,6 +213,28 @@ class SoundManager {
     });
   }
 
+  // Soft Loss Thud / Whomp
+  public playLose() {
+    triggerHaptic(30);
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.25);
+
+    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.25);
+  }
+
   // Big Jackpot Win Fanfare (Rich Multi-Oscillator Brass Fanfare)
   public playJackpot() {
     triggerHaptic([60, 40, 80, 50, 120]);

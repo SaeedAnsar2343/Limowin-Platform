@@ -5,6 +5,12 @@ import { SlotGame3D } from './engines/SlotGame3D';
 import { Roulette3D } from './engines/Roulette3D';
 import { DiceGame3D } from './engines/DiceGame3D';
 import { CardGameEngine } from './engines/CardGameEngine';
+import { BlackjackEngine } from './engines/BlackjackEngine';
+import { AndarBaharEngine } from './engines/AndarBaharEngine';
+import { TeenPattiEngine } from './engines/TeenPattiEngine';
+import { BaccaratEngine } from './engines/BaccaratEngine';
+import { PokerHoldemEngine } from './engines/PokerHoldemEngine';
+import { WheelGameShowEngine } from './engines/WheelGameShowEngine';
 import { CrashAviatorEngine } from './engines/CrashAviatorEngine';
 import { PlinkoEngine } from './engines/PlinkoEngine';
 import { MinesEngine } from './engines/MinesEngine';
@@ -39,6 +45,8 @@ export const PlayModal: React.FC = () => {
   };
 
   const renderEngine = () => {
+    const gameKey = (activeGame.title + ' ' + activeGame.id).toLowerCase();
+
     switch (activeGame.engineType) {
       case 'slot':
         return (
@@ -68,6 +76,86 @@ export const PlayModal: React.FC = () => {
           />
         );
       case 'card':
+        // Real game-specific routing:
+        if (gameKey.includes('blackjack') || gameKey.includes('pontoon') || gameKey.includes('spanish-21') || gameKey.includes('switch')) {
+          return (
+            <BlackjackEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        if (gameKey.includes('andar') || gameKey.includes('bahar')) {
+          return (
+            <AndarBaharEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        if (gameKey.includes('teen-patti') || gameKey.includes('teen patti') || gameKey.includes('3-patti') || gameKey.includes('ak47')) {
+          return (
+            <TeenPattiEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        if (gameKey.includes('baccarat') || gameKey.includes('punto')) {
+          return (
+            <BaccaratEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        if (
+          gameKey.includes('poker') ||
+          gameKey.includes('holdem') ||
+          gameKey.includes('hold\'em') ||
+          gameKey.includes('caribbean') ||
+          gameKey.includes('stud') ||
+          gameKey.includes('oasis') ||
+          gameKey.includes('russian') ||
+          gameKey.includes('pai gow')
+        ) {
+          return (
+            <PokerHoldemEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        if (
+          gameKey.includes('wheel') ||
+          gameKey.includes('crazy-time') ||
+          gameKey.includes('crazy time') ||
+          gameKey.includes('monopoly') ||
+          gameKey.includes('mega-ball') ||
+          gameKey.includes('mega ball') ||
+          gameKey.includes('triple-chance') ||
+          gameKey.includes('triple chance')
+        ) {
+          return (
+            <WheelGameShowEngine
+              game={activeGame}
+              balance={currentBal}
+              bonusMultiplier={effectiveBonusMult}
+              onPlay={handlePlayOutcome}
+            />
+          );
+        }
+        // Default card game: Dragon Tiger duel
         return (
           <CardGameEngine
             game={activeGame}

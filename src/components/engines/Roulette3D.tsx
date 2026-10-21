@@ -349,11 +349,11 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
         </div>
       </div>
 
-      {/* Control Console */}
-      <div className="w-full bg-slate-900 border border-slate-800 rounded-b-2xl p-4 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+      {/* Control Console - 100% Mobile Fitting & Zero Overlap */}
+      <div className="w-full bg-slate-900 border border-slate-800 rounded-b-2xl p-3 sm:p-4 shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Chips */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-bold text-slate-400 uppercase mr-1">Chip:</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 no-scrollbar shrink-0">
+          <span className="text-xs font-black text-slate-400 uppercase mr-1 shrink-0">Chip:</span>
           {currencyConfig.betPresets.slice(0, 5).map(val => (
             <button
               key={val}
@@ -362,9 +362,9 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
                 sound.playChip();
               }}
               disabled={isSpinning}
-              className={`w-12 h-12 rounded-full font-black text-xs transition-all border-2 flex items-center justify-center ${
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full font-black text-xs shrink-0 transition-all border-2 flex items-center justify-center ${
                 chipValue === val
-                  ? 'bg-amber-500 border-yellow-200 text-slate-950 scale-110 shadow-lg shadow-amber-500/30 ring-2 ring-yellow-400'
+                  ? 'bg-amber-500 border-yellow-200 text-slate-950 scale-105 shadow-lg shadow-amber-500/30 ring-2 ring-yellow-400'
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
               }`}
             >
@@ -377,7 +377,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
         <button
           onClick={spinWheel}
           disabled={isSpinning || balance < chipValue}
-          className={`px-8 py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center space-x-2 transition-all transform active:scale-95 ${
+          className={`w-full sm:w-48 py-3 px-6 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
             isSpinning
               ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
               : balance < chipValue
@@ -385,7 +385,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
               : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/25'
           }`}
         >
-          <RotateCw className={`w-5 h-5 ${isSpinning ? 'animate-spin' : ''}`} />
+          <RotateCw className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
           <span>
             {isSpinning
               ? 'Spinning...'
