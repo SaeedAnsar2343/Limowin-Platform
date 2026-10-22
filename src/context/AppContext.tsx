@@ -40,13 +40,19 @@ import {
 } from '../firebase';
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut as fbSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { pushService, PushMessage } from '../services/pushNotificationService';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 
 export interface SiteSettings {
   siteName: string;
@@ -312,6 +318,8 @@ interface AppContextType {
   updateBanners: (banners: BannerSlide[]) => Promise<boolean>;
   addBanner: (banner: Partial<BannerSlide>) => Promise<boolean>;
   deleteBanner: (id: string) => Promise<boolean>;
+  pushNotifications: PushMessage[];
+  clearPushNotifications: () => void;
 }
 
 const defaultSettings: SiteSettings = {
@@ -592,6 +600,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
+  const [pushNotifications, setPushNotifications] = useState<PushMessage[]>(() => pushService.getHistory());
+
+  useEffect(() => {
+    const unsub = pushService.subscribe(msg => {
+      setPushNotifications(prev => [msg, ...prev]);
+    });
+    return unsub;
+  }, []);
+
+  const clearPushNotifications = () => {
+    pushService.markAllAsRead();
+    setPushNotifications([]);
+  };
 
   const formatCurrency = (amt: number) => formatMoney(amt, currency);
 
@@ -629,8 +650,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [siteSettings.siteName]);
 
-  // Initial load from Firebase Firestore
+  // Centralized Firebase Google User Resolver for Web & Android Capacitor
+  const handleFirebaseUser = async (fbUser: any): Promise<boolean> => {
+    if (!fbUser || !fbUser.email) return false;
+    const cleanEmail = (fbUser.email || '').toLowerCase();
+    const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
+
+    if (isAdmin) {
+      const adminProfile: UserProfile = {
+        ...defaultAdmin,
+        name: fbUser.displayName || defaultAdmin.name,
+        email: cleanEmail,
+        avatar: fbUser.photoURL || undefined
+      };
+      setUser(adminProfile);
+      showToast('Welcome Super Admin Saeed!', 'success');
+      pushService.sendNotification('👑 Super Admin Access', 'Welcome back Super Admin Saeed!', 'system');
+      setActiveModal(null);
+      return true;
+    }
+
+    let found = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+    const isNewUser = !found;
+
+    if (!found) {
+      found = {
+        id: fbUser.uid,
+        name: fbUser.displayName || 'Google VIP Player',
+        email: cleanEmail,
+        role: 'player',
+        balance: currency === 'INR' ? 1000.00 : 25.00,
+        bonusBalance: currency === 'INR' ? 100.00 : 1.00,
+        totalDeposited: 0,
+        totalWithdrawn: 0,
+        vipLevel: 'Bronze VIP',
+        status: 'active',
+        referralCode: 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
+        referredBy: null,
+        referralCount: 0,
+        referralEarnings: 0,
+        gamesPlayedCount: 0,
+        bonusLockGamesRemaining: 5,
+        currency: currency,
+        avatar: fbUser.photoURL || undefined,
+        kycStatus: 'verified',
+        twoFactorEnabled: true,
+        createdAt: new Date().toISOString()
+      };
+      await syncUserToFirestore(found);
+      setAllUsers(prev => [found!, ...prev]);
+      pushService.notifyWelcomeBonus(formatCurrency(found.bonusBalance));
+    }
+
+    if (found) {
+      if (found.status === 'blocked') {
+        showToast('Account suspended by Admin. Contact VIP Support.', 'error');
+        return false;
+      }
+      setUser(found);
+      showToast(`Signed in with Google as ${found.name}!`, 'success');
+      if (!isNewUser) {
+        pushService.sendNotification('👋 Welcome Back!', `Good luck at Limowin today, ${found.name}!`, 'system');
+      }
+      setActiveModal(null);
+      return true;
+    }
+    return false;
+  };
+
+  // Initial load from Firebase Firestore & Push notification setup
   useEffect(() => {
+    // 1. Initialize Push Notification Service (Permissions, Android Channels)
+    pushService.init();
+
+    // 2. Handle Google Redirect Auth result on mobile / reload
+    getRedirectResult(auth).then(async (result) => {
+      if (result && result.user) {
+        await handleFirebaseUser(result.user);
+      }
+    }).catch(err => {
+      console.warn('Google redirect result check:', err);
+    });
+
+    // 3. Listen to Firebase Auth state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        if (!user || user.email?.toLowerCase() !== fbUser.email?.toLowerCase()) {
+          await handleFirebaseUser(fbUser);
+        }
+      }
+    });
+
+    // 4. Capacitor App State & Deep Links for return from browser
+    let removeStateListener: (() => void) | undefined;
+    let removeUrlListener: (() => void) | undefined;
+
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('appStateChange', async ({ isActive }) => {
+        if (isActive && auth.currentUser) {
+          await handleFirebaseUser(auth.currentUser);
+        }
+      }).then(handle => {
+        removeStateListener = () => handle.remove();
+      });
+
+      CapApp.addListener('appUrlOpen', async (data) => {
+        console.log('App opened with deep link URL:', data.url);
+        if (auth.currentUser) {
+          await handleFirebaseUser(auth.currentUser);
+        }
+      }).then(handle => {
+        removeUrlListener = () => handle.remove();
+      });
+    }
+
+    // 5. Browser visibility change (when user returns from Google auth tab)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && auth.currentUser && !user) {
+        handleFirebaseUser(auth.currentUser);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onVisibilityChange);
+
     getSiteSettingsFromFirestore().then(remoteSettings => {
       if (remoteSettings && remoteSettings.siteName) {
         setSiteSettings(prev => ({ ...prev, ...remoteSettings }));
@@ -696,7 +838,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setChatMessages(prev => {
           const map = new Map<string, ChatMessage>();
           prev.forEach(m => map.set(m.id, m));
-          remoteMsgs.forEach((m: any) => map.set(m.id, m));
+          remoteMsgs.forEach((m: any) => {
+            if (!map.has(m.id) && m.sender === 'admin' && m.userId === user?.id) {
+              pushService.notifySupportReply('Limowin VIP Support', m.message);
+            }
+            map.set(m.id, m);
+          });
           return Array.from(map.values()).sort(
             (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
@@ -706,6 +853,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => {
       unsubscribeChat();
+      unsubscribeAuth();
+      if (removeStateListener) removeStateListener();
+      if (removeUrlListener) removeUrlListener();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onVisibilityChange);
     };
   }, []);
 
@@ -823,64 +975,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  // Google Login
-  const loginWithGoogle = async () => {
+  // Google Login (Bulletproof for Desktop, Mobile Web & Android WebView / Capacitor)
+  const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const fbUser = result.user;
-      const cleanEmail = (fbUser.email || '').toLowerCase();
-      const isAdmin = cleanEmail === 'saeed.samadelivery@gmail.com';
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || Capacitor.isNativePlatform();
 
-      if (isAdmin) {
-        const adminProfile: UserProfile = {
-          ...defaultAdmin,
-          name: fbUser.displayName || defaultAdmin.name,
-          email: cleanEmail,
-          avatar: fbUser.photoURL || undefined
-        };
-        setUser(adminProfile);
-        showToast('Welcome Super Admin Saeed!', 'success');
-        setActiveModal(null);
-        return true;
+      if (Capacitor.isNativePlatform()) {
+        try {
+          showToast('Opening Google Sign-In...', 'info');
+          await signInWithRedirect(auth, googleProvider);
+          return true;
+        } catch (e: any) {
+          console.warn('Native signInWithRedirect error, trying popup:', e);
+        }
       }
 
-      let found = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-      if (!found && fbUser.email) {
-        found = {
-          id: fbUser.uid,
-          name: fbUser.displayName || 'Google VIP Player',
-          email: fbUser.email,
-          role: 'player',
-          balance: currency === 'INR' ? 1000.00 : 25.00,
-          bonusBalance: currency === 'INR' ? 100.00 : 1.00,
-          totalDeposited: 0,
-          totalWithdrawn: 0,
-          vipLevel: 'Bronze VIP',
-          status: 'active',
-          referralCode: 'LIMO-' + Math.floor(1000 + Math.random() * 9000),
-          referredBy: null,
-          referralCount: 0,
-          referralEarnings: 0,
-          gamesPlayedCount: 0,
-          bonusLockGamesRemaining: 5,
-          currency: currency,
-          avatar: fbUser.photoURL || undefined,
-          kycStatus: 'verified',
-          twoFactorEnabled: true,
-          createdAt: new Date().toISOString()
-        };
-        await syncUserToFirestore(found);
-        setAllUsers(prev => [found!, ...prev]);
-      }
+      // Try popup with race against a 15-second timeout so it never hangs indefinitely
+      const popupPromise = signInWithPopup(auth, googleProvider);
+      const timeoutPromise = new Promise<{ user: null }>((_, reject) => {
+        setTimeout(() => reject(new Error('TIMEOUT')), 15000);
+      });
 
-      if (found) {
-        setUser(found);
-        showToast(`Signed in with Google as ${found.name}!`, 'success');
-        setActiveModal(null);
-        return true;
+      try {
+        const result: any = await Promise.race([popupPromise, timeoutPromise]);
+        if (result && result.user) {
+          return await handleFirebaseUser(result.user);
+        }
+      } catch (err: any) {
+        if (err?.message === 'TIMEOUT' || err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
+          if (isMobile) {
+            showToast('Redirecting to Google Sign-In...', 'info');
+            await signInWithRedirect(auth, googleProvider);
+            return true;
+          }
+        }
+        throw err;
       }
-    } catch {
-      showToast('Google sign in cancelled or popup closed.', 'info');
+    } catch (err: any) {
+      console.warn('Google sign in error:', err);
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        showToast('Google sign-in incomplete. You can also sign in with your mobile number!', 'info');
+      }
     }
     return false;
   };
@@ -945,6 +1080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       await syncUserToFirestore(newUser);
       setAllUsers(prev => [newUser, ...prev]);
+      pushService.notifyWelcomeBonus(formatCurrency(newUser.bonusBalance));
       found = newUser;
     } else {
       if (!found.phone) {
@@ -1011,6 +1147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await syncUserToFirestore(newUser);
       setUser(newUser);
       setAllUsers(prev => [newUser, ...prev]);
+      pushService.notifyWelcomeBonus(formatCurrency(newUser.bonusBalance));
       showToast(`Welcome to ${siteSettings.siteName}! ${formatCurrency(newUser.bonusBalance)} Deposit Bonus added (Play 5 games to unlock).`, 'success');
       setActiveModal(null);
       return true;
@@ -1098,6 +1235,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await saveDepositToFirestore(newReq);
     setAllDeposits(prev => [newReq, ...prev]);
 
+    // Push notification for deposit submission
+    pushService.sendNotification(
+      '💳 Deposit Submitted',
+      `Deposit request of ${formatCurrency(amount)} (+${formatCurrency(bonusAmount)} Bonus) is being verified.`,
+      'deposit',
+      { amount, txHash }
+    );
+
     // Enforce 5-game bonus play lock on the user profile
     const updatedUser: UserProfile = {
       ...user,
@@ -1172,6 +1317,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await saveWithdrawalToFirestore(newReq);
 
     setAllWithdrawals(prev => [newReq, ...prev]);
+
+    // Push notification for withdrawal submission
+    pushService.sendNotification(
+      '🏦 Withdrawal Submitted',
+      `Payout request for ${formatCurrency(amount)} has been submitted for fast approval.`,
+      'withdrawal',
+      { amount }
+    );
+
     showToast(`Withdrawal of ${formatCurrency(amount)} requested! Admin will review shortly.`, 'success');
     return true;
   };
@@ -1184,8 +1338,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const effectivePayout = isWin ? bet * multiplier * bonusMult : 0;
     const netProfit = effectivePayout - bet;
 
-    // Sound effects & confetti
+    // Sound effects & confetti & push notification
     if (isWin) {
+      pushService.notifyBigWin(game.title, formatCurrency(effectivePayout), multiplier);
       if (multiplier >= 10) {
         sound.playJackpot();
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
@@ -1314,6 +1469,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setPromotions(prev => [newPromo, ...prev]);
     await savePromotionToFirestore(newPromo);
+    pushService.notifyPromotionActivated(newPromo.title);
     showToast(`Promotion "${newPromo.title}" published!`, 'success');
     return true;
   };
@@ -1364,6 +1520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     sound.playJackpot();
+    pushService.notifyDepositApproved(totalCredit, formatCurrency(totalCredit));
     showToast(`Deposit #${id} APPROVED! +${formatCurrency(totalCredit)} credited to player.`, 'success');
     return true;
   };
@@ -1379,6 +1536,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const refStr = txRef || 'TX-WTH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     setAllWithdrawals(prev => prev.map(w => w.id === id ? { ...w, status: 'approved', txRef: refStr } : w));
     await updateWithdrawalStatusInFirestore(id, 'approved', refStr);
+    const targetWth = allWithdrawals.find(w => w.id === id);
+    const wthAmt = targetWth?.amount || 0;
+    pushService.notifyWithdrawalProcessed(wthAmt, formatCurrency(wthAmt));
     showToast(`Withdrawal #${id} APPROVED! Sent via reference: ${refStr}`, 'success');
     return true;
   };
@@ -1532,7 +1692,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adjustUserBalance,
         updateBanners,
         addBanner,
-        deleteBanner
+        deleteBanner,
+        pushNotifications,
+        clearPushNotifications
       }}
     >
       {children}

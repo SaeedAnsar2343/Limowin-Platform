@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "414968028726",
+    "project_id": "pelican-pass",
+    "storage_bucket": "pelican-pass.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:414968028726:android:581253fcd7e4958fd84297",
+        "android_client_info": {
+          "package_name": "com.limowin.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "414968028726-apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEQRDZn6qowaPnOXDcmby-hJQcZPXZLHY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
