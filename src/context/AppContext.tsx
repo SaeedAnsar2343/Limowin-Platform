@@ -98,6 +98,7 @@ export interface PaymentGateways {
   upiFastPay: {
     enabled: boolean;
     upiId: string;
+    alternateUpiIds?: string[];
     qrCodeUrl: string;
     bonusPercent: number;
     instructions: string;
@@ -370,6 +371,7 @@ const defaultGateways: PaymentGateways = {
   upiFastPay: {
     enabled: true,
     upiId: 'limowin.pay@icici',
+    alternateUpiIds: ['limowin.fast@hdfcbank', 'limowin.vip@axisbank'],
     qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=limowin.pay@icici&pn=LimowinGaming',
     bonusPercent: 5,
     instructions: 'Scan QR with GPay, PhonePe, Paytm, or any UPI App. Instant INR deposit with Bonus.'

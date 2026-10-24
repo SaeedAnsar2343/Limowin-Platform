@@ -447,6 +447,29 @@ export const AdminPortal: React.FC = () => {
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"
                       />
                     </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Alternate Load-Balancing UPI IDs (Comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. limowin.fast@hdfcbank, limowin.vip@axisbank"
+                        value={(gatewayForm.upiFastPay.alternateUpiIds || []).join(', ')}
+                        onChange={e =>
+                          setGatewayForm({
+                            ...gatewayForm,
+                            upiFastPay: {
+                              ...gatewayForm.upiFastPay,
+                              alternateUpiIds: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                            }
+                          })
+                        }
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono font-bold"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Rotates deposit traffic across multiple bank VPAs to avoid daily transaction limits or single-account bottlenecks.
+                      </span>
+                    </div>
                   </div>
 
                   {/* Google Pay (GPay) */}
@@ -989,50 +1012,77 @@ export const AdminPortal: React.FC = () => {
                   {allWithdrawals.length === 0 ? (
                     <div className="text-center py-10 text-slate-400 text-xs">No withdrawal requests recorded yet.</div>
                   ) : (
-                    allWithdrawals.map(w => (
-                      <div
-                        key={w.id}
-                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-4"
-                      >
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-bold text-sm text-slate-900">{w.userName}</span>
-                            <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-mono text-slate-700">
-                              {w.userEmail}
-                            </span>
-                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                              w.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
-                              w.status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
-                              {w.status}
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            Method: <strong>{w.method}</strong> • Amount: <strong className="text-slate-900">{formatCurrency(w.amount)}</strong>
-                          </div>
-                          <div className="text-[11px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-200 mt-1.5 break-all">
-                            Destination: {w.details}
-                          </div>
-                        </div>
+                    allWithdrawals.map(w => {
+                      const reqUser = allUsers.find(u => u.id === w.userId || u.email?.toLowerCase() === w.userEmail?.toLowerCase());
+                      const gamesCount = reqUser ? (reqUser.gamesPlayedCount || 0) : 0;
+                      const isBonusUnlocked = !reqUser || reqUser.bonusLockGamesRemaining === 0 || gamesCount >= 5;
+                      const netDeposit = reqUser ? ((reqUser.totalDeposited || 0) - (reqUser.totalWithdrawn || 0)) : 0;
+                      const isSafe = isBonusUnlocked && gamesCount >= 5;
 
-                        {w.status === 'pending' && (
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => approveWithdrawal(w.id)}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs"
-                            >
-                              Approve & Dispatch
-                            </button>
-                            <button
-                              onClick={() => rejectWithdrawal(w.id, 'Account details incorrect')}
-                              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-xs"
-                            >
-                              Reject & Refund
-                            </button>
+                      return (
+                        <div
+                          key={w.id}
+                          className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-4"
+                        >
+                          <div className="flex-1 min-w-[280px]">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-sm text-slate-900">{w.userName}</span>
+                              <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-mono text-slate-700">
+                                {w.userEmail}
+                              </span>
+                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                w.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                                w.status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {w.status}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              Method: <strong>{w.method}</strong> • Amount: <strong className="text-slate-900">{formatCurrency(w.amount)}</strong>
+                            </div>
+                            <div className="text-[11px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-200 mt-1.5 break-all">
+                              Destination: {w.details}
+                            </div>
+
+                            {/* Automated Wagering & Turnover Audit Pill */}
+                            <div className={`mt-2 p-2 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs font-bold ${
+                              isSafe
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                : 'bg-rose-50 border-rose-300 text-rose-800'
+                            }`}>
+                              <div className="flex items-center space-x-1.5">
+                                {isSafe ? <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                                <span>
+                                  {isSafe
+                                    ? `SAFE TO PAY: 100% Wagering Verified (${gamesCount} Games Played • Bonus Unlocked)`
+                                    : `FRAUD ALERT: Bonus Locked or Zero-Play (${gamesCount}/5 Games Completed • Review Required)`}
+                                </span>
+                              </div>
+                              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/80 border border-slate-200">
+                                Net Deposit: {formatCurrency(netDeposit)}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))
+
+                          {w.status === 'pending' && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => approveWithdrawal(w.id)}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs"
+                              >
+                                Approve & Dispatch
+                              </button>
+                              <button
+                                onClick={() => rejectWithdrawal(w.id, 'Account details incorrect or wagering incomplete')}
+                                className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-xs"
+                              >
+                                Reject & Refund
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>

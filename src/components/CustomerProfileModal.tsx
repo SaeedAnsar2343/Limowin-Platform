@@ -56,6 +56,13 @@ export const CustomerProfileModal: React.FC = () => {
   const [depositTxHash, setDepositTxHash] = useState('');
   const [claimPromoBonus, setClaimPromoBonus] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [selectedUpiId, setSelectedUpiId] = useState<string>('');
+
+  const activeUpiId = selectedUpiId || paymentGateways.upiFastPay.upiId;
+  const allUpiList = Array.from(new Set([
+    paymentGateways.upiFastPay.upiId,
+    ...(paymentGateways.upiFastPay.alternateUpiIds || [])
+  ])).filter(Boolean);
 
   // Withdraw Form - Default based on currency (INR => UPI, USD => crypto TRC20)
   const [withdrawMethod, setWithdrawMethod] = useState<'upi' | 'gpay' | 'crypto' | 'bank'>(
@@ -345,17 +352,38 @@ export const CustomerProfileModal: React.FC = () => {
                 {depositMethod === 'upi' && (
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     <img
-                      src={paymentGateways.upiFastPay.qrCodeUrl}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=${encodeURIComponent(activeUpiId)}&pn=LimowinGaming`}
                       alt="UPI QR"
                       className="w-28 h-28 rounded-xl border border-slate-300 p-1 bg-white shadow-xs"
                     />
                     <div className="flex-1 space-y-1.5 text-center sm:text-left">
+                      {/* Multi-UPI Rail Selector */}
+                      {allUpiList.length > 1 && (
+                        <div className="flex items-center justify-center sm:justify-start space-x-1.5 mb-1.5">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">UPI Rail:</span>
+                          {allUpiList.map((id, idx) => (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => setSelectedUpiId(id)}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                                activeUpiId === id
+                                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-1 ring-amber-400'
+                                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              Rail {idx + 1}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="text-xs font-bold text-slate-500">Official UPI ID:</div>
                       <div className="p-2.5 bg-white rounded-xl border border-slate-200 font-mono text-xs font-black text-slate-900 flex items-center justify-between">
-                        <span>{paymentGateways.upiFastPay.upiId}</span>
+                        <span className="truncate mr-2">{activeUpiId}</span>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(paymentGateways.upiFastPay.upiId)}
+                          onClick={() => copyToClipboard(activeUpiId)}
                           className="p-1 hover:bg-slate-100 rounded ml-2 shrink-0"
                         >
                           {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}

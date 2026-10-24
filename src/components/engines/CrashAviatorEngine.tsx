@@ -20,6 +20,29 @@ interface SmokeParticle {
   vy: number;
 }
 
+interface PeerBet {
+  id: string;
+  user: string;
+  avatar: string;
+  betAmount: number;
+  targetCashout: number;
+  cashedOut: boolean;
+  cashedAt?: number;
+}
+
+const PEER_USERS = [
+  { user: 'r***8', avatar: '🇮🇳' },
+  { user: 'k***2', avatar: '🇮🇳' },
+  { user: 's***h', avatar: '🇮🇳' },
+  { user: 'a***n', avatar: '🇺🇸' },
+  { user: 'v***p', avatar: '🇮🇳' },
+  { user: 'm***x', avatar: '🇺🇸' },
+  { user: 'd***e', avatar: '💎' },
+  { user: 't***7', avatar: '🇮🇳' },
+  { user: 'j***9', avatar: '🇺🇸' },
+  { user: 'p***l', avatar: '🇮🇳' }
+];
+
 export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, onPlay }) => {
   const { currencyConfig, formatCurrency, calculateWinOutcome } = useApp();
   const [bet, setBet] = useState(currencyConfig.minBet);
@@ -29,6 +52,13 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
   const [autoCashoutVal, setAutoCashoutVal] = useState<number>(2.0);
   const [displayMultiplier, setDisplayMultiplier] = useState<number>(1.0);
   const [history, setHistory] = useState<number[]>([1.45, 2.80, 1.12, 14.25, 3.10, 1.95, 5.40]);
+  const [peerBets, setPeerBets] = useState<PeerBet[]>([
+    { id: 'p-0', user: 'r***8', avatar: '🇮🇳', betAmount: 500, targetCashout: 1.85, cashedOut: true, cashedAt: 1.85 },
+    { id: 'p-1', user: 'k***2', avatar: '🇮🇳', betAmount: 1000, targetCashout: 2.10, cashedOut: true, cashedAt: 2.10 },
+    { id: 'p-2', user: 's***h', avatar: '🇮🇳', betAmount: 200, targetCashout: 1.45, cashedOut: true, cashedAt: 1.45 },
+    { id: 'p-3', user: 'a***n', avatar: '🇺🇸', betAmount: 25, targetCashout: 3.20, cashedOut: false },
+    { id: 'p-4', user: 'v***p', avatar: '🇮🇳', betAmount: 2000, targetCashout: 1.35, cashedOut: true, cashedAt: 1.35 }
+  ]);
 
   // Craft identification
   const titleLower = (game.title + ' ' + game.id).toLowerCase();
@@ -282,6 +312,18 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
     }
 
     crashPointRef.current = targetCrashPoint;
+
+    // Initialize round peer bets
+    const freshPeers: PeerBet[] = PEER_USERS.map((p, idx) => ({
+      id: 'p-' + idx,
+      user: p.user,
+      avatar: p.avatar,
+      betAmount: currencyConfig.betPresets[idx % currencyConfig.betPresets.length] || 100,
+      targetCashout: Number((1.2 + (idx * 0.35) + Math.random() * 0.4).toFixed(2)),
+      cashedOut: false
+    }));
+    setPeerBets(freshPeers);
+
     const startTime = performance.now();
     let lastUiUpdate = 0;
 
@@ -291,6 +333,16 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
       // Realistic parabolic multiplier acceleration
       const curMult = 1.0 + Math.pow(elapsed * 0.95, 1.75);
       multiplierRef.current = curMult;
+
+      // Update peer cashouts
+      setPeerBets(prev =>
+        prev.map(p => {
+          if (!p.cashedOut && curMult >= p.targetCashout) {
+            return { ...p, cashedOut: true, cashedAt: Number(curMult.toFixed(2)) };
+          }
+          return p;
+        })
+      );
 
       // Throttle React state update to ~15fps for UI numbers while Canvas runs at full 60fps
       if (now - lastUiUpdate > 65) {
@@ -391,37 +443,102 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
         )}
       </div>
 
-      {/* Flight Canvas Window */}
-      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-2 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[260px] sm:min-h-[300px]">
-        <canvas
-          ref={canvasRef}
-          width={640}
-          height={260}
-          className="w-full max-w-2xl h-[220px] sm:h-[260px] rounded-xl bg-slate-950"
-        />
+      {/* Flight Canvas & Authentic Live Multiplayer Ledger */}
+      <div className="w-full bg-slate-950 border-x-4 border-slate-800 p-2 sm:p-4 flex flex-col lg:flex-row gap-3">
+        {/* Left Side: Authentic Spribe Live Bets Ledger */}
+        <div className="w-full lg:w-64 bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col shrink-0 order-2 lg:order-1 shadow-inner">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-black text-slate-300 uppercase">Live Bets ({peerBets.length + 1})</span>
+            </div>
+            <span className="text-[10px] font-black text-emerald-400 uppercase">Active</span>
+          </div>
 
-        {/* Center Multiplier HUD */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
-          <span
-            className={`text-6xl sm:text-7xl font-black tracking-tighter drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] transition-colors ${
-              gameState === 'crashed'
-                ? 'text-rose-500 animate-pulse'
+          <div className="space-y-1 max-h-[150px] lg:max-h-[230px] overflow-y-auto no-scrollbar text-xs">
+            {/* Player's Own Active Bet Row */}
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-[11px]">
+              <div className="flex items-center space-x-1.5 truncate">
+                <span className="text-xs">👤</span>
+                <span className="font-black text-amber-300 truncate">YOU</span>
+              </div>
+              <div className="flex items-center space-x-2 shrink-0">
+                <span className="text-amber-200 font-black">{formatCurrency(bet)}</span>
+                {gameState === 'cashed' ? (
+                  <span className="bg-emerald-500 text-slate-950 px-1.5 py-0.2 rounded font-black text-[10px]">
+                    {displayMultiplier.toFixed(2)}x
+                  </span>
+                ) : gameState === 'flying' ? (
+                  <span className="text-emerald-400 font-black text-[10px] animate-pulse">Flying</span>
+                ) : gameState === 'crashed' ? (
+                  <span className="text-rose-400 text-[10px] font-bold">Lost</span>
+                ) : (
+                  <span className="text-slate-500 text-[10px] font-bold">Waiting</span>
+                )}
+              </div>
+            </div>
+
+            {/* Peer Bets */}
+            {peerBets.map(p => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between p-1.5 rounded-lg bg-slate-950/70 border border-slate-800/80 text-[11px]"
+              >
+                <div className="flex items-center space-x-1.5 truncate">
+                  <span className="text-xs">{p.avatar}</span>
+                  <span className="font-bold text-slate-300 truncate">{p.user}</span>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span className="text-slate-400 font-bold">{formatCurrency(p.betAmount)}</span>
+                  {p.cashedOut ? (
+                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black text-[10px]">
+                      {p.cashedAt?.toFixed(2)}x
+                    </span>
+                  ) : gameState === 'crashed' ? (
+                    <span className="text-rose-500/80 text-[10px] font-bold">Flew Away</span>
+                  ) : gameState === 'flying' ? (
+                    <span className="text-amber-400 text-[10px] animate-pulse">In Flight</span>
+                  ) : (
+                    <span className="text-slate-500 text-[10px]">Waiting</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Side: Primary Flight Canvas Window */}
+        <div className="flex-1 bg-slate-950 rounded-xl relative overflow-hidden min-h-[240px] sm:min-h-[280px] flex items-center justify-center order-1 lg:order-2 border border-slate-800/60">
+          <canvas
+            ref={canvasRef}
+            width={580}
+            height={260}
+            className="w-full h-[220px] sm:h-[260px] rounded-xl bg-slate-950"
+          />
+
+          {/* Center Multiplier HUD */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
+            <span
+              className={`text-6xl sm:text-7xl font-black tracking-tighter drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] transition-colors ${
+                gameState === 'crashed'
+                  ? 'text-rose-500 animate-pulse'
+                  : gameState === 'cashed'
+                  ? 'text-emerald-400'
+                  : 'text-white'
+              }`}
+            >
+              {displayMultiplier.toFixed(2)}x
+            </span>
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1 text-slate-300 drop-shadow">
+              {gameState === 'crashed'
+                ? 'FLEW AWAY!'
                 : gameState === 'cashed'
-                ? 'text-emerald-400'
-                : 'text-white'
-            }`}
-          >
-            {displayMultiplier.toFixed(2)}x
-          </span>
-          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1 text-slate-300 drop-shadow">
-            {gameState === 'crashed'
-              ? 'FLEW AWAY!'
-              : gameState === 'cashed'
-              ? 'CASHED OUT!'
-              : gameState === 'flying'
-              ? 'IN FLIGHT...'
-              : 'PLACE BET TO TAKE OFF'}
-          </span>
+                ? 'CASHED OUT!'
+                : gameState === 'flying'
+                ? 'IN FLIGHT...'
+                : 'PLACE BET TO TAKE OFF'}
+            </span>
+          </div>
         </div>
       </div>
 

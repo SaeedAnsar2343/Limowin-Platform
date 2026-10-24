@@ -3,6 +3,7 @@ import { useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { CategoryNav } from './components/CategoryNav';
 import { HeroBanner } from './components/HeroBanner';
+import { LiveWinnersTicker } from './components/LiveWinnersTicker';
 import { GameGrid } from './components/GameGrid';
 import { Footer } from './components/Footer';
 import { PlayModal } from './components/PlayModal';
@@ -64,6 +65,7 @@ export const AppContent: React.FC = () => {
         ) : (
           <>
             <HeroBanner />
+            <LiveWinnersTicker />
             <GameGrid />
           </>
         )}
