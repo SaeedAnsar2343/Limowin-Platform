@@ -39,7 +39,7 @@ export const MinesEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, o
     const outcome = calculateWinOutcome(bet, 3.5);
     plannedOutcomeRef.current = {
       isWin: outcome.isWin,
-      maxSafeClicks: outcome.isWin ? Math.floor(3 + Math.random() * 4) : Math.floor(1 + Math.random() * 2)
+      maxSafeClicks: outcome.isWin ? Math.floor(3 + Math.random() * 3) : 0
     };
 
     // Generate random mines
@@ -88,6 +88,14 @@ export const MinesEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, o
     if (!isPlaying || revealed.length === 0) return;
     setIsPlaying(false);
     setGameOver(true);
+
+    if (!plannedOutcomeRef.current.isWin) {
+      sound.playLose();
+      setRevealed(Array.from({ length: 25 }, (_, i) => i));
+      onPlay(bet, 0, false);
+      return;
+    }
+
     sound.playJackpot();
     const winAmt = bet * multiplier * bonusMultiplier;
     setLastWin(winAmt);

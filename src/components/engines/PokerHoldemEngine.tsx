@@ -47,6 +47,7 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
   const [lastWin, setLastWin] = useState<number | null>(null);
   const timerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
+  const plannedOutcomeRef = useRef<{ isWin: boolean; multiplier: number }>({ isWin: false, multiplier: 0 });
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -78,6 +79,7 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
     sound.playChip();
 
     const outcome = calculateWinOutcome(bet, 2.5);
+    plannedOutcomeRef.current = outcome;
 
     let pHole = [drawCard(), drawCard()];
     let dHole = [drawCard(true), drawCard(true)];
@@ -122,7 +124,7 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
     const revealedDealer = dealerHole.map(c => ({ ...c, hidden: false }));
     setDealerHole(revealedDealer);
 
-    const outcome = calculateWinOutcome(bet, 2.5);
+    const outcome = plannedOutcomeRef.current;
     setGameState('showdown');
 
     if (outcome.isWin) {

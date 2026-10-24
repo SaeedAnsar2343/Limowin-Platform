@@ -44,6 +44,7 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
   const crashPointRef = useRef<number>(1.0);
   const isMountedRef = useRef<boolean>(true);
   const smokeParticlesRef = useRef<SmokeParticle[]>([]);
+  const plannedIsWinRef = useRef<boolean>(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -271,12 +272,13 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
 
     // Calculate crash point with house edge
     const outcome = calculateWinOutcome(bet, 5.0);
+    plannedIsWinRef.current = outcome.isWin;
     let targetCrashPoint = 1.0;
 
     if (outcome.isWin) {
-      targetCrashPoint = Math.max(1.85, Number((outcome.multiplier * (1.1 + Math.random() * 0.4)).toFixed(2)));
+      targetCrashPoint = Math.max(2.1, Number((outcome.multiplier * (1.1 + Math.random() * 0.4)).toFixed(2)));
     } else {
-      targetCrashPoint = Number((1.05 + Math.random() * 0.35).toFixed(2));
+      targetCrashPoint = Number((1.01 + Math.random() * 0.15).toFixed(2));
     }
 
     crashPointRef.current = targetCrashPoint;
@@ -324,6 +326,18 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
   const cashOut = () => {
     if (gameState !== 'flying') return;
     if (animRef.current) cancelAnimationFrame(animRef.current);
+
+    if (!plannedIsWinRef.current) {
+      // Craft lost before user cashed out
+      setGameState('crashed');
+      multiplierRef.current = 1.0;
+      setDisplayMultiplier(1.0);
+      drawFrame(1.0, 'crashed');
+      sound.playBounce();
+      setHistory(prev => [1.0, ...prev.slice(0, 9)]);
+      onPlay(bet, 0, false);
+      return;
+    }
 
     const winMult = Number(multiplierRef.current.toFixed(2));
     setGameState('cashed');

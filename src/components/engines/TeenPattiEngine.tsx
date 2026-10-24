@@ -132,26 +132,28 @@ export const TeenPattiEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
     let dCards = [drawCard(true), drawCard(true), drawCard(true)];
 
     if (outcome.isWin) {
-      // Give player a solid hand (Pair or Sequence)
-      if (Math.random() < 0.4) {
-        // Pure Sequence or Trio
-        pCards = [
-          { suit: '♠', value: 'Q', num: 12, color: 'black' },
-          { suit: '♠', value: 'K', num: 13, color: 'black' },
-          { suit: '♠', value: 'A', num: 14, color: 'black' }
-        ];
-      } else {
-        // Pair
-        pCards = [
-          { suit: '♥', value: 'K', num: 13, color: 'red' },
-          { suit: '♦', value: 'K', num: 13, color: 'red' },
-          { suit: '♣', value: '9', num: 9, color: 'black' }
-        ];
-      }
+      // Give player a solid winning hand (Pure Sequence or Pair)
+      pCards = [
+        { suit: '♠', value: 'Q', num: 12, color: 'black' },
+        { suit: '♠', value: 'K', num: 13, color: 'black' },
+        { suit: '♠', value: 'A', num: 14, color: 'black' }
+      ];
       dCards = [
         { suit: '♣', value: 'J', num: 11, color: 'black', hidden: true },
         { suit: '♠', value: '8', num: 8, color: 'black', hidden: true },
         { suit: '♦', value: '5', num: 5, color: 'red', hidden: true }
+      ];
+    } else {
+      // Dealer holds higher hand (Pair of Kings vs High Card)
+      pCards = [
+        { suit: '♥', value: '9', num: 9, color: 'red' },
+        { suit: '♦', value: '6', num: 6, color: 'red' },
+        { suit: '♣', value: '3', num: 3, color: 'black' }
+      ];
+      dCards = [
+        { suit: '♠', value: 'K', num: 13, color: 'black', hidden: true },
+        { suit: '♦', value: 'K', num: 13, color: 'red', hidden: true },
+        { suit: '♣', value: '10', num: 10, color: 'black', hidden: true }
       ];
     }
 
@@ -172,17 +174,13 @@ export const TeenPattiEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
 
       setIsPlaying(false);
 
-      if (outcome.isWin || pRank.rank > dRank.rank) {
-        const mult = pRank.mult;
+      if (outcome.isWin) {
+        const mult = pRank.mult || 2.0;
         const winAmt = bet * mult * bonusMultiplier;
         setRoundResult(`🎉 YOU WIN with ${pRank.name}!`);
         setLastWin(winAmt);
         sound.playWin();
         onPlay(bet, mult, true);
-      } else if (pRank.rank === dRank.rank) {
-        setRoundResult(`🤝 PUSH (${pRank.name})`);
-        setLastWin(bet);
-        onPlay(bet, 1.0, true);
       } else {
         setRoundResult(`Dealer wins with ${dRank.name}`);
         sound.playLose();

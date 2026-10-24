@@ -143,6 +143,9 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
       } else if (betSide === 'BANKER') {
         pPoints = 8;
         bPoints = Math.floor(Math.random() * 7);
+      } else {
+        pPoints = 8;
+        bPoints = 7;
       }
     }
 
@@ -161,7 +164,7 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
 
       setRoadmap(prev => [...prev.slice(-9), winner === 'PLAYER' ? 'P' : winner === 'BANKER' ? 'B' : 'T']);
 
-      const isWin = (winner === betSide) || outcome.isWin;
+      const isWin = outcome.isWin;
 
       if (isWin) {
         const mult = betSide === 'TIE' ? 9.0 : betSide === 'BANKER' ? 1.95 : 2.0;

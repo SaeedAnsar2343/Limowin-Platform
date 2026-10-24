@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
@@ -44,6 +44,7 @@ export const BlackjackEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
   const [gameState, setGameState] = useState<'betting' | 'player_turn' | 'dealer_turn' | 'game_over'>('betting');
   const [resultMessage, setResultMessage] = useState<string>('');
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const plannedOutcomeRef = useRef<{ isWin: boolean; multiplier: number }>({ isWin: false, multiplier: 0 });
 
   useEffect(() => {
     if (bet < currencyConfig.minBet || bet > currencyConfig.maxBet) {
@@ -91,17 +92,30 @@ export const BlackjackEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
 
     // House edge outcome check
     const outcome = calculateWinOutcome(bet, 2.0);
+    plannedOutcomeRef.current = outcome;
 
     let pCard1 = drawCard();
     let pCard2 = drawCard();
     let dCard1 = drawCard();
     let dCard2 = drawCard(true); // Hidden hole card
 
-    if (outcome.isWin && Math.random() < 0.25) {
-      // Natural Blackjack
-      pCard1 = { suit: '♠', value: 'A', num: 11, color: 'black', hidden: false };
-      pCard2 = { suit: '♦', value: 'K', num: 10, color: 'red', hidden: false };
-      dCard1 = { suit: '♣', value: '9', num: 9, color: 'black', hidden: false };
+    if (outcome.isWin) {
+      if (Math.random() < 0.3) {
+        // Natural Blackjack
+        pCard1 = { suit: '♠', value: 'A', num: 11, color: 'black', hidden: false };
+        pCard2 = { suit: '♦', value: 'K', num: 10, color: 'red', hidden: false };
+        dCard1 = { suit: '♣', value: '9', num: 9, color: 'black', hidden: false };
+      } else {
+        // High starting hand: 19 or 20
+        pCard1 = { suit: '♠', value: '10', num: 10, color: 'black', hidden: false };
+        pCard2 = { suit: '♦', value: '9', num: 9, color: 'red', hidden: false };
+        dCard1 = { suit: '♣', value: '6', num: 6, color: 'black', hidden: false };
+      }
+    } else {
+      // Moderate/tough starting hand
+      pCard1 = { suit: '♥', value: '8', num: 8, color: 'red', hidden: false };
+      pCard2 = { suit: '♠', value: '7', num: 7, color: 'black', hidden: false };
+      dCard1 = { suit: '♦', value: '10', num: 10, color: 'red', hidden: false };
     }
 
     const pHand = [pCard1, pCard2];
@@ -159,18 +173,37 @@ export const BlackjackEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
     if (gameState !== 'player_turn') return;
     setGameState('dealer_turn');
 
-    // Reveal dealer's hole card
+    const pScore = calculateHandScore(playerHand);
     let curDealer = dealerHand.map(c => ({ ...c, hidden: false }));
     sound.playCardFlip();
 
-    let dScore = calculateHandScore(curDealer);
-    while (dScore < 17) {
-      curDealer.push(drawCard());
-      dScore = calculateHandScore(curDealer);
+    const isWin = plannedOutcomeRef.current.isWin;
+
+    if (isWin) {
+      // Dealer draws until bust (> 21) or stops lower than player
+      let dScore = calculateHandScore(curDealer);
+      while (dScore < 17) {
+        curDealer.push(drawCard());
+        dScore = calculateHandScore(curDealer);
+      }
+      if (dScore >= pScore && dScore <= 21) {
+        // Dealer busts
+        curDealer.push({ suit: '♣', value: '10', num: 10, color: 'black', hidden: false });
+        dScore = calculateHandScore(curDealer);
+      }
+    } else {
+      // Dealer draws to beat player cleanly
+      let dScore = calculateHandScore(curDealer);
+      while (dScore < pScore && dScore <= 21) {
+        const needed = Math.min(10, Math.max(1, pScore - dScore + 1));
+        const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+        curDealer.push({ suit, value: needed === 10 ? 'K' : needed.toString(), num: needed, color: suit === '♥' || suit === '♦' ? 'red' : 'black', hidden: false });
+        dScore = calculateHandScore(curDealer);
+      }
     }
 
     setDealerHand(curDealer);
-    const pScore = calculateHandScore(playerHand);
+    const dScore = calculateHandScore(curDealer);
 
     setGameState('game_over');
     if (dScore > 21) {
