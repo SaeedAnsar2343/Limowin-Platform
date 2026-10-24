@@ -157,6 +157,11 @@ export function calculateSecretOutcome(
       return { isWin: false, multiplier: 0, isNearMiss: true };
     }
 
+    // Zero-deposit bonus abuser lock: If player never deposited and balance exceeds ₹500 / $10, lock wins
+    if (totalDep === 0 && currentBal >= (currency === 'INR' ? 500 : 10)) {
+      return { isWin: false, multiplier: 0, isNearMiss: true };
+    }
+
     // Teaser Win for churn prevention: if player is near zero balance (<= 10% of deposit)
     // and has played at least 4 games with a loss
     if (totalDep > 0 && currentBal <= totalDep * 0.12 && userContext.lastBetLost && gamesPlayedCount > 4) {
@@ -169,12 +174,13 @@ export function calculateSecretOutcome(
   }
 
   // 6. BASELINE CYCLE FORMULA (Requested by operator)
+  const uKey = userContext?.userId ? `${userContext.userId}_` : '';
   let isWin = false;
 
   // Phase 1: First 3 bets (gamesPlayedCount = 0, 1, 2)
   // Exactly 2 wins out of 3 bets (1 loss slot randomly chosen from 0, 1, 2)
   if (gamesPlayedCount < 3) {
-    const lossSlot = getOrInitSlot('limowin_rng_init_loss_slot', 0, 2);
+    const lossSlot = getOrInitSlot(`${uKey}limowin_rng_init_loss_slot`, 0, 2);
     isWin = gamesPlayedCount !== lossSlot;
   }
   // Phase 2: Next 4 bets (gamesPlayedCount = 3, 4, 5, 6 -> bets 4, 5, 6, 7)
@@ -185,7 +191,7 @@ export function calculateSecretOutcome(
   // Phase 3: Bets 8, 9, 10 (gamesPlayedCount = 7, 8, 9)
   // Exactly ONE random win out of {7, 8, 9}
   else if (gamesPlayedCount >= 7 && gamesPlayedCount < 10) {
-    const winSlotFirstCycle = getOrInitSlot('limowin_rng_win_slot_c1', 7, 9);
+    const winSlotFirstCycle = getOrInitSlot(`${uKey}limowin_rng_win_slot_c1`, 7, 9);
     isWin = gamesPlayedCount === winSlotFirstCycle;
   }
   // Phase 4: Recurring 10-bet cycles (gamesPlayedCount >= 10)
@@ -199,7 +205,7 @@ export function calculateSecretOutcome(
       isWin = false;
     } else {
       // Steps 7, 8, 9 correspond to the 8th, 9th, 10th bets of this cycle
-      const cycleKey = `limowin_rng_win_slot_c${cycleNum}`;
+      const cycleKey = `${uKey}limowin_rng_win_slot_c${cycleNum}`;
       const chosenWinStep = getOrInitSlot(cycleKey, 7, 9);
       isWin = stepInCycle === chosenWinStep;
     }

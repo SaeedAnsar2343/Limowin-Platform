@@ -261,20 +261,15 @@ export const SlotGame3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
         setLastWin(winAmount);
         sound.playWin();
       } else {
-        // Losing spin
+        // Guaranteed losing spin: staggering symbols so no 3 match on any payline
+        setWinLine(null);
         finalReels = [
-          [symbols[0].icon, symbols[1].icon, symbols[2].icon],
-          [symbols[3].icon, symbols[4].icon, symbols[5].icon],
-          [symbols[6].icon, symbols[7].icon, symbols[1].icon],
-          [symbols[2].icon, symbols[3].icon, symbols[4].icon],
-          [symbols[5].icon, symbols[6].icon, symbols[7].icon]
+          [symbols[0 % symbols.length].icon, symbols[1 % symbols.length].icon, symbols[2 % symbols.length].icon],
+          [symbols[3 % symbols.length].icon, symbols[4 % symbols.length].icon, symbols[5 % symbols.length].icon],
+          [symbols[6 % symbols.length].icon, symbols[7 % symbols.length].icon, symbols[1 % symbols.length].icon],
+          [symbols[2 % symbols.length].icon, symbols[3 % symbols.length].icon, symbols[4 % symbols.length].icon],
+          [symbols[5 % symbols.length].icon, symbols[6 % symbols.length].icon, symbols[0 % symbols.length].icon]
         ];
-        // Jumble to avoid accidental match
-        for (let c = 0; c < 5; c++) {
-          for (let r = 0; r < 3; r++) {
-            finalReels[c][r] = symbols[(c * 3 + r + Math.floor(Math.random() * 3)) % symbols.length].icon;
-          }
-        }
         setLastWin(null);
         sound.playLose();
       }

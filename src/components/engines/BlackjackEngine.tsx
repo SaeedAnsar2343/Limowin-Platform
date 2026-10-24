@@ -206,6 +206,16 @@ export const BlackjackEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
     const dScore = calculateHandScore(curDealer);
 
     setGameState('game_over');
+
+    // Strict Owner-First Enforcement: When scheduled to lose, player can NEVER win or push
+    if (!isWin) {
+      const finalDScore = Math.min(21, Math.max(pScore + 1, dScore <= 21 && dScore > pScore ? dScore : 20));
+      setResultMessage(`Dealer wins (${finalDScore} vs ${pScore})`);
+      sound.playLose();
+      onPlay(bet, 0, false);
+      return;
+    }
+
     if (dScore > 21) {
       // Dealer busts, player wins
       const winAmt = bet * 2.0 * bonusMultiplier;
@@ -256,6 +266,32 @@ export const BlackjackEngine: React.FC<Props> = ({ game, balance, bonusMultiplie
     // Dealer draws
     let curDealer = dealerHand.map(c => ({ ...c, hidden: false }));
     let dScore = calculateHandScore(curDealer);
+
+    const isWin = plannedOutcomeRef.current.isWin;
+
+    // Strict Owner-First Enforcement for Double Down
+    if (!isWin) {
+      while (dScore < pScore && dScore <= 21) {
+        const needed = Math.min(10, Math.max(1, pScore - dScore + 1));
+        const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+        curDealer.push({
+          suit,
+          value: needed === 10 ? 'K' : needed.toString(),
+          num: needed,
+          color: suit === '♥' || suit === '♦' ? 'red' : 'black',
+          hidden: false
+        });
+        dScore = calculateHandScore(curDealer);
+      }
+      setDealerHand(curDealer);
+      const finalDScore = Math.min(21, Math.max(pScore + 1, dScore <= 21 && dScore > pScore ? dScore : 20));
+      setGameState('game_over');
+      setResultMessage(`Dealer wins (${finalDScore} vs ${pScore})`);
+      sound.playLose();
+      onPlay(doubleBet, 0, false);
+      return;
+    }
+
     while (dScore < 17) {
       curDealer.push(drawCard());
       dScore = calculateHandScore(curDealer);

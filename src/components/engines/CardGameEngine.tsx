@@ -92,24 +92,37 @@ export const CardGameEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
     const theoreticalMult = betSide === 'TIE' ? 8.0 : 2.0;
     const outcome = calculateWinOutcome(chip, theoreticalMult);
 
-    let cardANum = Math.floor(2 + Math.random() * 11); // 2-12
+    let cardANum: number;
     let cardBNum: number;
 
     if (outcome.isWin) {
       if (betSide === 'A') {
-        cardBNum = Math.max(1, cardANum - Math.floor(1 + Math.random() * 3));
+        // Player bet Dragon (A) and wins: A must be strictly greater than B
+        cardANum = Math.floor(5 + Math.random() * 8); // 5 to 12
+        cardBNum = cardANum - Math.floor(1 + Math.random() * 3); // B < A
       } else if (betSide === 'B') {
-        cardBNum = Math.min(13, cardANum + Math.floor(1 + Math.random() * 3));
+        // Player bet Tiger (B) and wins: B must be strictly greater than A
+        cardANum = Math.floor(2 + Math.random() * 8); // 2 to 9
+        cardBNum = cardANum + Math.floor(1 + Math.random() * 3); // B > A
       } else {
+        // Player bet TIE and wins: A equals B
+        cardANum = Math.floor(2 + Math.random() * 11);
         cardBNum = cardANum;
       }
     } else {
+      // House wins / player loses: strictly force losing condition
       if (betSide === 'A') {
-        cardBNum = Math.min(13, cardANum + Math.floor(1 + Math.random() * 3));
+        // Player bet Dragon (A) and loses: Tiger (B) strictly beats Dragon (A)
+        cardANum = Math.floor(2 + Math.random() * 8); // 2 to 9
+        cardBNum = cardANum + Math.floor(1 + Math.random() * 3); // B > A strictly
       } else if (betSide === 'B') {
-        cardBNum = Math.max(1, cardANum - Math.floor(1 + Math.random() * 3));
+        // Player bet Tiger (B) and loses: Dragon (A) strictly beats Tiger (B)
+        cardANum = Math.floor(5 + Math.random() * 8); // 5 to 12
+        cardBNum = cardANum - Math.floor(1 + Math.random() * 3); // A > B strictly
       } else {
-        cardBNum = cardANum > 1 ? cardANum - 1 : cardANum + 1;
+        // Player bet TIE and loses: ensure A and B are strictly unequal
+        cardANum = Math.floor(2 + Math.random() * 8);
+        cardBNum = cardANum + 2;
       }
     }
 

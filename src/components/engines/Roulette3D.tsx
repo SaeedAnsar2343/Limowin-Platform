@@ -316,20 +316,30 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
         targetNum = currentBetNum !== null ? currentBetNum : 17;
       }
     } else {
-      // Psychological Near-Miss Engine:
-      // If player picked a straight number, land in the adjacent pocket directly beside it!
+      // Psychological Near-Miss Engine with Strict Loss Guarantee:
+      // If player picked a straight number, attempt to land in the adjacent pocket directly beside it
+      // as long as that pocket does NOT trigger a win for the player's active bet.
+      const safeNonMatching = nonMatchingNumbers.length > 0
+        ? nonMatchingNumbers
+        : ROULETTE_NUMBERS.filter(n => !checkMatchesBet(n, selectedBetType, currentBetNum));
+
       if (currentBetNum !== null) {
         const betIdx = ROULETTE_NUMBERS.indexOf(currentBetNum);
         if (betIdx !== -1) {
           const adjacentOffsets = [-1, 1];
           const offset = adjacentOffsets[Math.floor(Math.random() * adjacentOffsets.length)];
           const nearIdx = (betIdx + offset + ROULETTE_NUMBERS.length) % ROULETTE_NUMBERS.length;
-          targetNum = ROULETTE_NUMBERS[nearIdx];
+          const candidate = ROULETTE_NUMBERS[nearIdx];
+          if (!checkMatchesBet(candidate, selectedBetType, currentBetNum)) {
+            targetNum = candidate;
+          } else {
+            targetNum = safeNonMatching[Math.floor(Math.random() * safeNonMatching.length)] ?? 0;
+          }
         } else {
-          targetNum = nonMatchingNumbers[Math.floor(Math.random() * nonMatchingNumbers.length)] || 0;
+          targetNum = safeNonMatching[Math.floor(Math.random() * safeNonMatching.length)] ?? 0;
         }
       } else {
-        targetNum = nonMatchingNumbers[Math.floor(Math.random() * nonMatchingNumbers.length)] || 0;
+        targetNum = safeNonMatching[Math.floor(Math.random() * safeNonMatching.length)] ?? 0;
       }
     }
 

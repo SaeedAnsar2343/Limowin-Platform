@@ -70,6 +70,29 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
     };
   };
 
+  const drawCardForPoint = (pt: number): Card => {
+    const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+    const matchingDefs = CARD_DECK.filter(d => d.num === pt);
+    const def = matchingDefs.length > 0 
+      ? matchingDefs[Math.floor(Math.random() * matchingDefs.length)]
+      : CARD_DECK[0];
+    return {
+      suit,
+      value: def.val,
+      num: def.num,
+      color: suit === '♥' || suit === '♦' ? 'red' : 'black'
+    };
+  };
+
+  const createBaccaratHand = (points: number): Card[] => {
+    if (points === 0) {
+      return [drawCardForPoint(0), drawCardForPoint(0)];
+    }
+    const c1 = Math.min(points, Math.max(1, Math.floor(points / 2)));
+    const c2 = points - c1;
+    return [drawCardForPoint(c1), drawCardForPoint(c2)];
+  };
+
   const getBaccaratPoints = (cards: Card[]): number => {
     return cards.reduce((sum, c) => sum + c.num, 0) % 10;
   };
@@ -148,6 +171,9 @@ export const BaccaratEngine: React.FC<Props> = ({ game, balance, bonusMultiplier
         bPoints = 7;
       }
     }
+
+    pCards = createBaccaratHand(pPoints);
+    bCards = createBaccaratHand(bPoints);
 
     setPlayerCards(pCards);
     setBankerCards(bCards);

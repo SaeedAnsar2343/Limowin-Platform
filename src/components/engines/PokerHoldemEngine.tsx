@@ -89,6 +89,11 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
         { suit: '♠', value: 'A', num: 14, color: 'black' },
         { suit: '♥', value: 'K', num: 13, color: 'red' }
       ];
+    } else {
+      pHole = [
+        { suit: '♣', value: 'J', num: 11, color: 'black' },
+        { suit: '♦', value: '8', num: 8, color: 'red' }
+      ];
     }
 
     setPlayerHole(pHole);
@@ -120,14 +125,17 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
     const fullBoard = [...communityCards, turn, river];
     setCommunityCards(fullBoard);
 
-    // Reveal dealer hole cards
-    const revealedDealer = dealerHole.map(c => ({ ...c, hidden: false }));
-    setDealerHole(revealedDealer);
-
     const outcome = plannedOutcomeRef.current;
     setGameState('showdown');
 
+    // Reveal dealer hole cards with guaranteed visual showdown
+    let revealedDealer: Card[];
     if (outcome.isWin) {
+      revealedDealer = [
+        { suit: '♣', value: '10', num: 10, color: 'black', hidden: false },
+        { suit: '♦', value: '7', num: 7, color: 'red', hidden: false }
+      ];
+      setDealerHole(revealedDealer);
       const mult = 2.5;
       const winAmt = bet * mult * bonusMultiplier;
       setRoundResult('🎉 YOU WIN with Two Pair (Aces & Kings)!');
@@ -135,7 +143,12 @@ export const PokerHoldemEngine: React.FC<Props> = ({ game, balance, bonusMultipl
       sound.playWin();
       onPlay(bet, mult, true);
     } else {
-      setRoundResult('Dealer wins with Straight');
+      revealedDealer = [
+        { suit: '♠', value: 'A', num: 14, color: 'black', hidden: false },
+        { suit: '♥', value: 'A', num: 14, color: 'red', hidden: false }
+      ];
+      setDealerHole(revealedDealer);
+      setRoundResult('Dealer wins with Pocket Aces (A-A)');
       sound.playLose();
       onPlay(bet, 0, false);
     }

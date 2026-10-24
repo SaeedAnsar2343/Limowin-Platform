@@ -149,7 +149,10 @@ export const WheelGameShowEngine: React.FC<Props> = ({ game, balance, bonusMulti
       targetIdx = matchIdxs.length > 0 ? matchIdxs[Math.floor(Math.random() * matchIdxs.length)] : 0;
     } else {
       const nonMatchIdxs = SEGMENTS.map((s, idx) => s.mult !== chosenBet ? idx : -1).filter(idx => idx !== -1);
-      targetIdx = nonMatchIdxs[Math.floor(Math.random() * nonMatchIdxs.length)];
+      targetIdx = nonMatchIdxs.length > 0
+        ? nonMatchIdxs[Math.floor(Math.random() * nonMatchIdxs.length)]
+        : SEGMENTS.findIndex(s => s.mult !== chosenBet);
+      if (targetIdx === -1) targetIdx = 0;
     }
 
     const sliceAngle = (2 * Math.PI) / SEGMENTS.length;
@@ -181,7 +184,7 @@ export const WheelGameShowEngine: React.FC<Props> = ({ game, balance, bonusMulti
         const landedSeg = SEGMENTS[targetIdx];
         setWinningSegment(landedSeg.label);
 
-        const isWin = (landedSeg.mult === chosenBet) || outcome.isWin;
+        const isWin = outcome.isWin;
         if (isWin) {
           const winAmt = bet * landedSeg.mult * bonusMultiplier;
           setLastWin(winAmt);
