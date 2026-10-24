@@ -9,7 +9,13 @@ import {
   detectUserRegion,
   formatMoney
 } from '../utils/currency';
-import { calculateSecretOutcome, WinOutcome } from '../utils/gameRNG';
+import {
+  calculateSecretOutcome,
+  WinOutcome,
+  HouseEngineSettings,
+  getHouseEngineSettings,
+  saveHouseEngineSettings
+} from '../utils/gameRNG';
 import {
   auth,
   googleProvider,
@@ -36,7 +42,9 @@ import {
   saveChatMessageToFirestore,
   subscribeToChatMessages,
   syncBannersToFirestore,
-  getBannersFromFirestore
+  getBannersFromFirestore,
+  syncHouseEngineSettingsToFirestore,
+  getHouseEngineSettingsFromFirestore
 } from '../firebase';
 import {
   signInWithPopup,
@@ -179,6 +187,8 @@ export interface UserProfile {
   kycStatus?: 'verified' | 'pending' | 'unverified';
   twoFactorEnabled?: boolean;
   createdAt: string;
+  lastBetAmount?: number;
+  lastBetLost?: boolean;
 }
 
 export interface DepositRequest {
@@ -318,6 +328,8 @@ interface AppContextType {
   updateBanners: (banners: BannerSlide[]) => Promise<boolean>;
   addBanner: (banner: Partial<BannerSlide>) => Promise<boolean>;
   deleteBanner: (id: string) => Promise<boolean>;
+  houseEngineSettings: HouseEngineSettings;
+  updateHouseEngineSettings: (settings: Partial<HouseEngineSettings>) => Promise<boolean>;
   pushNotifications: PushMessage[];
   clearPushNotifications: () => void;
 }
@@ -538,6 +550,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ]);
   const [gameOverrides, setGameOverrides] = useState<Record<string, { bonusMultiplier: number; customRtp?: number }>>({});
   const [banners, setBanners] = useState<BannerSlide[]>(defaultBanners);
+  const [houseEngineSettings, setHouseEngineSettings] = useState<HouseEngineSettings>(getHouseEngineSettings);
+
+  const updateHouseEngineSettings = async (newSettings: Partial<HouseEngineSettings>) => {
+    const updated = saveHouseEngineSettings(newSettings);
+    setHouseEngineSettings(updated);
+    await syncHouseEngineSettingsToFirestore(updated);
+    showToast(`House Engine set to ${updated.mode.toUpperCase()} mode!`, 'success');
+    return true;
+  };
   const [user, setUserState] = useState<UserProfile | null>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -821,6 +842,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    getHouseEngineSettingsFromFirestore().then(remoteEngine => {
+      if (remoteEngine && remoteEngine.mode) {
+        const merged = saveHouseEngineSettings(remoteEngine);
+        setHouseEngineSettings(merged);
+      }
+    });
+
     getAllUsersFromFirestore().then(remoteUsers => {
       if (remoteUsers && remoteUsers.length > 0) {
         setAllUsers(prev => {
@@ -903,10 +931,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { bonusAmount, label };
   };
 
-  // Secret Game Outcome Calculator (House edge + tiered bets + first 2 games hook)
+  // Secret Game Outcome Calculator (Owner-First dynamic house edge + banker controls)
   const calculateWinOutcome = (betAmount: number, maxTheoreticalMult: number = 2.0): WinOutcome => {
     const gamesCount = user ? (user.gamesPlayedCount || 0) : 0;
-    return calculateSecretOutcome(betAmount, currency, gamesCount, maxTheoreticalMult);
+    return calculateSecretOutcome(
+      betAmount,
+      currency,
+      gamesCount,
+      maxTheoreticalMult,
+      user
+        ? {
+            userId: user.id,
+            balance: user.balance,
+            totalDeposited: user.totalDeposited,
+            totalWithdrawn: user.totalWithdrawn,
+            lastBetAmount: user.lastBetAmount,
+            lastBetLost: user.lastBetLost
+          }
+        : undefined
+    );
   };
 
   // Login
@@ -1366,7 +1409,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...user,
       balance: newBal,
       gamesPlayedCount: nextGamesCount,
-      bonusLockGamesRemaining: nextBonusLock
+      bonusLockGamesRemaining: nextBonusLock,
+      lastBetAmount: bet,
+      lastBetLost: !isWin
     };
 
     setUser(updatedUser);
@@ -1693,6 +1738,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateBanners,
         addBanner,
         deleteBanner,
+        houseEngineSettings,
+        updateHouseEngineSettings,
         pushNotifications,
         clearPushNotifications
       }}

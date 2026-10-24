@@ -394,3 +394,28 @@ export const getBannersFromFirestore = async () => {
   }
   return null;
 };
+
+// 12. House Profit Engine Settings
+export const syncHouseEngineSettingsToFirestore = async (settings: any) => {
+  try {
+    const ref = doc(db, 'settings', 'houseEngine');
+    await setDoc(ref, { ...settings, updatedAt: new Date().toISOString() }, { merge: true });
+    return true;
+  } catch (error) {
+    console.warn('Firestore syncHouseEngine fallback:', error);
+    return false;
+  }
+};
+
+export const getHouseEngineSettingsFromFirestore = async () => {
+  try {
+    const ref = doc(db, 'settings', 'houseEngine');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data();
+    }
+  } catch (error) {
+    console.warn('Firestore getHouseEngine fallback:', error);
+  }
+  return null;
+};

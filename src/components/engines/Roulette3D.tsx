@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameItem } from '../../data/gamesCatalog';
 import { sound } from '../../utils/soundEffects';
 import { useApp } from '../../context/AppContext';
-import { RotateCw, Trophy, Volume2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { RotateCw, Trophy, Sparkles, PlusCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Props {
@@ -41,7 +41,7 @@ type BetType =
   | 'col3'; // Row 1
 
 export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, onPlay }) => {
-  const { currencyConfig, formatCurrency, calculateWinOutcome } = useApp();
+  const { currencyConfig, formatCurrency, calculateWinOutcome, setActiveModal } = useApp();
 
   const [selectedBetType, setSelectedBetType] = useState<BetType>('red');
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
@@ -51,29 +51,22 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [history, setHistory] = useState<number[]>([17, 32, 0, 7, 24]);
 
-  // Visual wheel and ball animation states
-  const [wheelRotation, setWheelRotation] = useState<number>(0);
-  const [ballPos, setBallPos] = useState<{ angle: number; radiusRatio: number }>({ angle: -Math.PI / 2, radiusRatio: 0.88 });
-  const [ballVisible, setBallVisible] = useState<boolean>(true);
-
+  // Persistent Animation References (Prevents React re-render thrashing & Canvas blanking)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const wheelRotationRef = useRef<number>(0);
+  const ballPosRef = useRef<{ angle: number; radiusRatio: number }>({ angle: -Math.PI / 2, radiusRatio: 0.76 });
+  const isSpinningRef = useRef<boolean>(false);
 
+  // Synchronize chip value with currency config
   useEffect(() => {
     if (chipValue < currencyConfig.minBet || chipValue > currencyConfig.maxBet) {
       setChipValue(currencyConfig.minBet);
     }
   }, [currencyConfig]);
 
-  // Clean up animation on unmount
-  useEffect(() => {
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, []);
-
-  // Draw High-End 3D Roulette Wheel Canvas
-  useEffect(() => {
+  // Render high performance Canvas directly without React state overhead
+  const drawWheel = useCallback((rotationDeg: number, ball: { angle: number; radiusRatio: number }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -91,7 +84,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
 
     ctx.clearRect(0, 0, width, height);
 
-    // 1. Outer Mahogany / Carbon Wood Bowl
+    // 1. Outer Mahogany / Dark Wood Bowl
     const bowlGrad = ctx.createRadialGradient(centerX, centerY, pocketInner, centerX, centerY, outerRadius);
     bowlGrad.addColorStop(0, '#2d1810');
     bowlGrad.addColorStop(0.7, '#1b0d07');
@@ -106,7 +99,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     ctx.strokeStyle = '#eab308';
     ctx.stroke();
 
-    // 2. Ball Track Ring (Smooth Dark Track where ball glides)
+    // 2. Ball Track Ring (Dark Gunmetal Finish)
     const trackGrad = ctx.createRadialGradient(centerX, centerY, pocketOuter, centerX, centerY, rimRadius);
     trackGrad.addColorStop(0, '#111827');
     trackGrad.addColorStop(1, '#1f2937');
@@ -115,7 +108,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     ctx.fillStyle = trackGrad;
     ctx.fill();
 
-    // Subtle track frets / deflectors (diamonds) around the rim
+    // Deflector diamond pins
     for (let f = 0; f < 8; f++) {
       const deflAngle = (f * Math.PI) / 4;
       const dx = centerX + (rimRadius - 7) * Math.cos(deflAngle);
@@ -123,16 +116,13 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       ctx.beginPath();
       ctx.arc(dx, dy, 2.5, 0, 2 * Math.PI);
       ctx.fillStyle = '#facc15';
-      ctx.shadowColor = '#facc15';
-      ctx.shadowBlur = 4;
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
 
     // 3. Rotating Wheel Head
     ctx.save();
     ctx.translate(centerX, centerY);
-    ctx.rotate((wheelRotation * Math.PI) / 180);
+    ctx.rotate((rotationDeg * Math.PI) / 180);
 
     const sliceAngle = (2 * Math.PI) / ROULETTE_NUMBERS.length;
 
@@ -146,7 +136,6 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       ctx.arc(0, 0, pocketInner, endAngle, startAngle, true);
       ctx.closePath();
 
-      // Pocket colors
       if (num === 0) {
         ctx.fillStyle = '#16a34a'; // Vibrant green
       } else if (RED_NUMBERS.includes(num)) {
@@ -168,10 +157,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       ctx.textAlign = 'right';
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 11px sans-serif';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 3;
       ctx.fillText(num.toString(), pocketOuter - 6, 4);
-      ctx.shadowBlur = 0;
       ctx.restore();
     });
 
@@ -215,39 +201,34 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     ctx.beginPath();
     ctx.arc(0, 0, 10, 0, 2 * Math.PI);
     ctx.fillStyle = '#fef08a';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 6;
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     ctx.restore();
 
     // 5. Animated Silver Ball
-    if (ballVisible) {
-      const currentRadius = pocketOuter * ballPos.radiusRatio;
-      const bx = centerX + currentRadius * Math.cos(ballPos.angle);
-      const by = centerY + currentRadius * Math.sin(ballPos.angle);
+    const currentRadius = pocketOuter * ball.radiusRatio;
+    const bx = centerX + currentRadius * Math.cos(ball.angle);
+    const by = centerY + currentRadius * Math.sin(ball.angle);
 
-      // Ball shadow
-      ctx.beginPath();
-      ctx.arc(bx + 2, by + 2, 5.5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.fill();
+    // Ball shadow
+    ctx.beginPath();
+    ctx.arc(bx + 2, by + 2, 5.5, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fill();
 
-      // Silver Pearl Sphere
-      const ballGrad = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, 5.5);
-      ballGrad.addColorStop(0, '#ffffff');
-      ballGrad.addColorStop(0.5, '#e2e8f0');
-      ballGrad.addColorStop(1, '#94a3b8');
+    // Silver Pearl Sphere
+    const ballGrad = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, 5.5);
+    ballGrad.addColorStop(0, '#ffffff');
+    ballGrad.addColorStop(0.5, '#e2e8f0');
+    ballGrad.addColorStop(1, '#94a3b8');
 
-      ctx.beginPath();
-      ctx.arc(bx, by, 5.5, 0, 2 * Math.PI);
-      ctx.fillStyle = ballGrad;
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = isSpinning ? 8 : 4;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
+    ctx.beginPath();
+    ctx.arc(bx, by, 5.5, 0, 2 * Math.PI);
+    ctx.fillStyle = ballGrad;
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = isSpinningRef.current ? 6 : 2;
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
     // 6. Top Needle Indicator (Gold Arrow Pointing Down to Top-Center at 270°)
     ctx.beginPath();
@@ -256,19 +237,24 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     ctx.lineTo(centerX + 8, centerY - outerRadius - 16);
     ctx.closePath();
     ctx.fillStyle = '#facc15';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 4;
     ctx.fill();
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.shadowBlur = 0;
-  }, [wheelRotation, ballPos, ballVisible, isSpinning]);
+  }, []);
+
+  // Initial draw & handle component mount
+  useEffect(() => {
+    drawWheel(wheelRotationRef.current, ballPosRef.current);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [drawWheel]);
 
   // Check if a number matches the selected bet type
   const checkMatchesBet = (num: number, bType: BetType, sNum: number | null): boolean => {
     if (bType === 'number') return num === sNum;
-    if (num === 0) return false; // 0 loses all outside bets
+    if (num === 0) return false;
     if (bType === 'red') return RED_NUMBERS.includes(num);
     if (bType === 'black') return !RED_NUMBERS.includes(num);
     if (bType === 'even') return num % 2 === 0;
@@ -284,52 +270,66 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     return false;
   };
 
-  // Get theoretical payout multiplier for chosen bet
   const getTheoreticalMultiplier = (bType: BetType): number => {
     if (bType === 'number') return 36.0;
     if (bType === 'dozen1' || bType === 'dozen2' || bType === 'dozen3' || bType === 'col1' || bType === 'col2' || bType === 'col3') {
       return 3.0;
     }
-    return 2.0; // Red/Black, Even/Odd, Low/High
+    return 2.0;
   };
 
   const spinWheel = () => {
-    if (isSpinning || balance < chipValue) return;
+    if (isSpinningRef.current || balance < chipValue) return;
 
-    if (selectedBetType === 'number' && selectedNumber === null) {
-      setSelectedNumber(17); // default fallback number if straight bet picked without selecting
+    // Cancel any stray animation loop
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
     }
 
+    const currentBetNum = selectedBetType === 'number' ? (selectedNumber !== null ? selectedNumber : 17) : null;
+    if (selectedBetType === 'number' && selectedNumber === null) {
+      setSelectedNumber(17);
+    }
+
+    isSpinningRef.current = true;
     setIsSpinning(true);
     setWinningNumber(null);
     setLastWin(null);
-    setBallVisible(true);
 
     sound.playChip();
     sound.playWheelSpin();
 
     const theoreticalMult = getTheoreticalMultiplier(selectedBetType);
-    const targetBetNumber = selectedBetType === 'number' ? (selectedNumber !== null ? selectedNumber : 17) : null;
 
     // Centralized House Outcome calculation
     const outcome = calculateWinOutcome(chipValue, theoreticalMult);
 
-    // Pick target number strictly consistent with outcome
     let targetNum: number;
-    const matchingNumbers = ROULETTE_NUMBERS.filter(n => checkMatchesBet(n, selectedBetType, targetBetNumber));
-    const nonMatchingNumbers = ROULETTE_NUMBERS.filter(n => !checkMatchesBet(n, selectedBetType, targetBetNumber));
+    const matchingNumbers = ROULETTE_NUMBERS.filter(n => checkMatchesBet(n, selectedBetType, currentBetNum));
+    const nonMatchingNumbers = ROULETTE_NUMBERS.filter(n => !checkMatchesBet(n, selectedBetType, currentBetNum));
 
     if (outcome.isWin) {
       if (matchingNumbers.length > 0) {
         targetNum = matchingNumbers[Math.floor(Math.random() * matchingNumbers.length)];
       } else {
-        targetNum = targetBetNumber !== null ? targetBetNumber : 17;
+        targetNum = currentBetNum !== null ? currentBetNum : 17;
       }
     } else {
-      if (nonMatchingNumbers.length > 0) {
-        targetNum = nonMatchingNumbers[Math.floor(Math.random() * nonMatchingNumbers.length)];
+      // Psychological Near-Miss Engine:
+      // If player picked a straight number, land in the adjacent pocket directly beside it!
+      if (currentBetNum !== null) {
+        const betIdx = ROULETTE_NUMBERS.indexOf(currentBetNum);
+        if (betIdx !== -1) {
+          const adjacentOffsets = [-1, 1];
+          const offset = adjacentOffsets[Math.floor(Math.random() * adjacentOffsets.length)];
+          const nearIdx = (betIdx + offset + ROULETTE_NUMBERS.length) % ROULETTE_NUMBERS.length;
+          targetNum = ROULETTE_NUMBERS[nearIdx];
+        } else {
+          targetNum = nonMatchingNumbers[Math.floor(Math.random() * nonMatchingNumbers.length)] || 0;
+        }
       } else {
-        targetNum = 0;
+        targetNum = nonMatchingNumbers[Math.floor(Math.random() * nonMatchingNumbers.length)] || 0;
       }
     }
 
@@ -343,16 +343,16 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
     if (delta < 0) delta += 360;
 
     const spins = 5 + Math.floor(Math.random() * 3);
-    const currentRotMod = wheelRotation % 360;
+    const currentRotMod = wheelRotationRef.current % 360;
     let extraRotation = delta - currentRotMod;
     if (extraRotation <= 0) extraRotation += 360;
-    const finalWheelTarget = wheelRotation + 360 * spins + extraRotation;
+    const finalWheelTarget = wheelRotationRef.current + 360 * spins + extraRotation;
 
     const startTime = performance.now();
-    const duration = 3200; // 3.2s smooth high-speed spin
-    const startRot = wheelRotation;
+    const duration = 3000;
+    const startRot = wheelRotationRef.current;
 
-    let bouncePlayed = false;
+    let bounceClickPlayed = false;
 
     const animate = (now: number) => {
       const elapsed = now - startTime;
@@ -361,36 +361,41 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
       // Smooth cubic-out easing for wheel deceleration
       const wheelEase = 1 - Math.pow(1 - progress, 3.2);
       const currentWheelAngle = startRot + (finalWheelTarget - startRot) * wheelEase;
-      setWheelRotation(currentWheelAngle);
+      wheelRotationRef.current = currentWheelAngle;
 
       // Ball Physics: Starts fast counter-clockwise on outer track, then drops into pocket
-      const ballSpins = 7.5;
+      const ballSpins = 7.0;
       const ballInitialSpeed = (ballSpins * 2 * Math.PI) * (1 - Math.pow(progress, 1.8));
-      const targetBallAngleRad = -Math.PI / 2; // Fixed at top pointer at the end
+      const targetBallAngleRad = -Math.PI / 2;
 
-      // Ball radius smoothly transitions from outer track (0.96) to pocket (0.76)
-      let radiusRatio = 0.96;
+      let radiusRatio = 0.95;
       if (progress > 0.65) {
         const dropProgress = (progress - 0.65) / 0.35;
-        radiusRatio = 0.96 - 0.20 * (1 - Math.pow(1 - dropProgress, 2));
+        radiusRatio = 0.95 - 0.19 * (1 - Math.pow(1 - dropProgress, 2));
       }
 
-      // Small bounce clicks as ball settles
-      if (progress > 0.75 && progress < 0.92) {
-        if (Math.random() > 0.7) {
-          sound.playBounce();
-        }
+      if (progress > 0.82 && !bounceClickPlayed) {
+        bounceClickPlayed = true;
+        sound.playBounce();
       }
+
+      const currentBallAngle = targetBallAngleRad - ballInitialSpeed;
+      ballPosRef.current = { angle: currentBallAngle, radiusRatio };
+
+      // Draw directly on Canvas without invoking React Virtual DOM re-renders
+      drawWheel(currentWheelAngle, ballPosRef.current);
 
       if (progress < 1) {
-        const currentBallAngle = targetBallAngleRad - ballInitialSpeed;
-        setBallPos({ angle: currentBallAngle, radiusRatio });
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
-        // Precise landing under the needle
-        setBallPos({ angle: -Math.PI / 2, radiusRatio: 0.76 });
-        setWinningNumber(targetNum);
+        // Spin Finished: Normalize wheel rotation to [0, 360) so degrees never explode
+        wheelRotationRef.current = finalWheelTarget % 360;
+        ballPosRef.current = { angle: -Math.PI / 2, radiusRatio: 0.76 };
+        drawWheel(wheelRotationRef.current, ballPosRef.current);
+
+        isSpinningRef.current = false;
         setIsSpinning(false);
+        setWinningNumber(targetNum);
         setHistory(prev => [targetNum, ...prev.slice(0, 9)]);
 
         sound.playBallDrop();
@@ -424,7 +429,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
             <div className="flex items-center space-x-2">
               <h3 className="text-white font-extrabold text-base sm:text-lg tracking-wide">{game.title}</h3>
               <span className="bg-amber-500/20 text-amber-300 text-[10px] font-black px-2 py-0.5 rounded border border-amber-500/30">
-                EUROPEAN
+                EUROPEAN 3D
               </span>
             </div>
             <span className="text-xs text-slate-400 flex items-center space-x-1">
@@ -533,7 +538,7 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
           {/* Table Grid: Green 0 + 3 Rows x 12 Columns */}
           <div className="bg-emerald-950/70 p-2 sm:p-3 rounded-2xl border-2 border-emerald-700/50 shadow-inner">
             <div className="flex gap-1">
-              {/* Green Zero (Spans all 3 rows) */}
+              {/* Green Zero */}
               <button
                 onClick={() => {
                   setSelectedBetType('number');
@@ -861,27 +866,29 @@ export const Roulette3D: React.FC<Props> = ({ game, balance, bonusMultiplier, on
           </button>
         </div>
 
-        {/* Spin Wheel Button */}
-        <button
-          onClick={spinWheel}
-          disabled={isSpinning || balance < chipValue}
-          className={`w-full sm:w-56 py-3.5 px-6 rounded-xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
-            isSpinning
-              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              : balance < chipValue
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-              : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/30'
-          }`}
-        >
-          <RotateCw className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
-          <span>
-            {isSpinning
-              ? 'Spinning Wheel...'
-              : balance < chipValue
-              ? 'Insufficient Balance'
-              : `SPIN ${formatCurrency(chipValue)}`}
-          </span>
-        </button>
+        {/* Spin / Deposit Action Button */}
+        {balance < chipValue ? (
+          <button
+            onClick={() => setActiveModal('deposit')}
+            className="w-full sm:w-56 py-3.5 px-6 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 text-white shadow-emerald-600/30"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Deposit to Spin</span>
+          </button>
+        ) : (
+          <button
+            onClick={spinWheel}
+            disabled={isSpinning}
+            className={`w-full sm:w-56 py-3.5 px-6 rounded-xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
+              isSpinning
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 text-slate-950 shadow-yellow-500/30'
+            }`}
+          >
+            <RotateCw className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
+            <span>{isSpinning ? 'Spinning Wheel...' : `SPIN ${formatCurrency(chipValue)}`}</span>
+          </button>
+        )}
       </div>
     </div>
   );

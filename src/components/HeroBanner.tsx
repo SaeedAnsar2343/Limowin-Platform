@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLivePlayers } from '../services/livePlayersService';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,7 @@ import {
 
 export const HeroBanner: React.FC = () => {
   const { siteSettings, banners, setActiveModal } = useApp();
+  const { totalOnline } = useLivePlayers();
   const [currentIdx, setCurrentIdx] = useState(0);
 
   const activeBanners = banners.filter(b => b.active !== false);
@@ -188,7 +190,13 @@ export const HeroBanner: React.FC = () => {
           </span>
         </div>
 
-        <div className="hidden sm:flex items-center space-x-3 text-[11px] font-bold text-slate-600 shrink-0">
+        {/* Live Active Online Counter Pill */}
+        <div className="flex items-center space-x-1.5 bg-slate-900 border border-emerald-500/40 text-emerald-400 px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-black shrink-0 shadow-sm mr-2 sm:mr-3">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span>{totalOnline.toLocaleString()} Live Players</span>
+        </div>
+
+        <div className="hidden md:flex items-center space-x-3 text-[11px] font-bold text-slate-600 shrink-0">
           <div className="flex items-center space-x-1">
             <Zap className="w-3.5 h-3.5 text-amber-500" />
             <span>Instant USDT / UPI Payouts</span>

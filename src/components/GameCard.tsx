@@ -1,7 +1,8 @@
 import React from 'react';
 import { GameItem } from '../data/gamesCatalog';
 import { useApp } from '../context/AppContext';
-import { Play, Sparkles, Flame, Star } from 'lucide-react';
+import { useLivePlayers } from '../services/livePlayersService';
+import { Play, Sparkles, Flame, Star, Users } from 'lucide-react';
 import { sound } from '../utils/soundEffects';
 
 interface Props {
@@ -10,9 +11,11 @@ interface Props {
 
 export const GameCard: React.FC<Props> = ({ game }) => {
   const { setActiveGame, gameOverrides } = useApp();
+  const { getGamePlayers } = useLivePlayers();
 
   const override = gameOverrides[game.id];
   const bonusMult = override ? override.bonusMultiplier : game.bonusMultiplier;
+  const liveCount = getGamePlayers(game.id);
 
   const handleLaunch = () => {
     sound.playChip();
@@ -55,6 +58,12 @@ export const GameCard: React.FC<Props> = ({ game }) => {
             <span>BUY</span>
           </div>
         )}
+
+        {/* Live Players Count Badge (Dynamic Real-Time Ticker) */}
+        <div className="absolute bottom-2 left-2 z-10 bg-slate-950/85 backdrop-blur-xs text-emerald-400 border border-emerald-500/40 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center space-x-1 shadow-md">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span>{liveCount} playing</span>
+        </div>
 
         {/* Hover Play Button Overlay */}
         <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">

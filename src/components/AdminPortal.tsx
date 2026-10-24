@@ -27,7 +27,11 @@ import {
   Send,
   Smartphone,
   Sparkles,
-  Bot
+  Bot,
+  ShieldAlert,
+  Sliders,
+  Flame,
+  Lock
 } from 'lucide-react';
 
 export const AdminPortal: React.FC = () => {
@@ -63,17 +67,20 @@ export const AdminPortal: React.FC = () => {
     currency,
     formatCurrency,
     setActiveModal,
-    showToast
+    showToast,
+    houseEngineSettings,
+    updateHouseEngineSettings
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'settings' | 'payments' | 'promotions' | 'games' | 'deposits' | 'withdrawals' | 'users' | 'support' | 'affiliates' | 'media'
+    'overview' | 'settings' | 'payments' | 'promotions' | 'games' | 'deposits' | 'withdrawals' | 'users' | 'support' | 'affiliates' | 'media' | 'houseEngine'
   >('overview');
 
   // Form states
   const [siteForm, setSiteForm] = useState({ ...siteSettings });
   const [gatewayForm, setGatewayForm] = useState({ ...paymentGateways });
   const [bonusConfigForm, setBonusConfigForm] = useState({ ...depositBonusConfig });
+  const [engineForm, setEngineForm] = useState({ ...houseEngineSettings });
 
   const [gameSearch, setGameSearch] = useState('');
   const [selectedGameId, setSelectedGameId] = useState('ae-dragontiger');
@@ -208,6 +215,7 @@ export const AdminPortal: React.FC = () => {
               { id: 'settings', label: 'Site Name & Brand', icon: Settings },
               { id: 'payments', label: 'Gateways: UPI, GPay & Crypto', icon: CreditCard },
               { id: 'promotions', label: 'Deposit Bonus & Promos', icon: Gift },
+              { id: 'houseEngine', label: 'House Win System & Profit Dials', icon: ShieldAlert, alert: houseEngineSettings.mode === 'panic' },
               { id: 'games', label: '200+ Games & Bonuses', icon: Gamepad2 },
               { id: 'deposits', label: `Pending Deposits (${pendingDeposits.length})`, icon: ArrowDownLeft, badge: pendingDeposits.length },
               { id: 'withdrawals', label: `Pending Withdrawals (${pendingWithdrawals.length})`, icon: ArrowUpRight, badge: pendingWithdrawals.length },
@@ -237,7 +245,11 @@ export const AdminPortal: React.FC = () => {
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
                     <span>{tab.label}</span>
                   </div>
-                  {tab.badge && tab.badge > 0 ? (
+                  {tab.alert ? (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider animate-pulse">
+                      PANIC
+                    </span>
+                  ) : tab.badge && tab.badge > 0 ? (
                     <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center">
                       {tab.badge}
                     </span>
@@ -1666,6 +1678,317 @@ export const AdminPortal: React.FC = () => {
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                     />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 12. HOUSE PROFIT ENGINE & WIN SYSTEM (OWNER-FIRST CONTROLS) */}
+            {activeTab === 'houseEngine' && (
+              <div className="space-y-6">
+                <div className="border-b border-slate-200 pb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-xl font-black text-slate-900">Owner-First House Win Engine &amp; Profit Dials</h2>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                        Live Protected
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Real-time mathematical dials designed exclusively to maximize operator net profits, block arbitrage/Martingale bots, and prevent house bankroll depletion.
+                    </p>
+                  </div>
+
+                  {engineForm.mode === 'panic' && (
+                    <div className="bg-rose-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider animate-pulse flex items-center space-x-1.5 shadow-lg">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Global Panic Lockdown Active (100% House Wins)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 1. Master House Margin Presets (4 Clickable Dials) */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
+                    Select House Profit Margin Dial:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Launch Mode */}
+                    <div
+                      onClick={() => setEngineForm({ ...engineForm, mode: 'launch' })}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                        engineForm.mode === 'launch'
+                          ? 'bg-blue-50/80 border-blue-500 shadow-md ring-2 ring-blue-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">🚀</span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                          85% House Edge
+                        </span>
+                      </div>
+                      <h4 className="font-black text-sm text-slate-900 mt-2">Launch Mode</h4>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                        Slightly looser teasers for new players to stimulate word-of-mouth and initial deposits.
+                      </p>
+                    </div>
+
+                    {/* Harvest Mode (Standard) */}
+                    <div
+                      onClick={() => setEngineForm({ ...engineForm, mode: 'harvest' })}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                        engineForm.mode === 'harvest'
+                          ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">🌾</span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                          92% House Edge
+                        </span>
+                      </div>
+                      <h4 className="font-black text-sm text-slate-900 mt-2">Harvest Mode</h4>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                        Standard daily operational setting. Highly profitable with 2 wins in first 3 bets then 7 losses per 10-bet cycle.
+                      </p>
+                    </div>
+
+                    {/* Aggressive Mode */}
+                    <div
+                      onClick={() => setEngineForm({ ...engineForm, mode: 'aggressive' })}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                        engineForm.mode === 'aggressive'
+                          ? 'bg-amber-50/80 border-amber-500 shadow-md ring-2 ring-amber-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">💰</span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                          98% House Edge
+                        </span>
+                      </div>
+                      <h4 className="font-black text-sm text-slate-900 mt-2">Aggressive Profit</h4>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                        Aggressive extraction mode for peak deposit days and weekends. Converts 35% of eligible wins into house losses.
+                      </p>
+                    </div>
+
+                    {/* Emergency Panic Switch */}
+                    <div
+                      onClick={() => setEngineForm({ ...engineForm, mode: 'panic' })}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                        engineForm.mode === 'panic'
+                          ? 'bg-rose-100 border-rose-600 shadow-lg ring-2 ring-rose-400'
+                          : 'bg-white border-rose-200 hover:bg-rose-50/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">🛑</span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-600 text-white animate-pulse">
+                          100% House Win
+                        </span>
+                      </div>
+                      <h4 className="font-black text-sm text-rose-900 mt-2">Panic Lockdown</h4>
+                      <p className="text-[11px] text-rose-700 mt-1 leading-snug">
+                        Emergency lockdown switch. 100% guaranteed house wins across all games. 0% player payouts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Operational Safeguards (Anti-Martingale & Anti-Whale) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Anti-Martingale Card */}
+                  <div className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <ShieldAlert className="w-5 h-5 text-amber-500" />
+                        <h4 className="font-black text-sm text-slate-900">Anti-Martingale Doubling Shield</h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEngineForm({ ...engineForm, antiMartingale: !engineForm.antiMartingale })}
+                        className={`px-3 py-1 rounded-full text-xs font-black uppercase transition-all ${
+                          engineForm.antiMartingale
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {engineForm.antiMartingale ? 'ACTIVE / ON' : 'DISABLED'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Automatically detects when a player doubles or triples their bet after a loss (e.g. ₹100 → ₹200 → ₹400) and <strong>forces an immediate 100% loss</strong> to break Martingale bot exploits.
+                    </p>
+                  </div>
+
+                  {/* Net-Deposit Banker Safeguard */}
+                  <div className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Sliders className="w-5 h-5 text-emerald-600" />
+                      <h4 className="font-black text-sm text-slate-900">Net-Deposit Banker Ceiling</h4>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      If a player's balance exceeds their lifetime deposits by this multiplier ratio, the engine clamps their win rate to <strong>0%</strong> so player balance naturally flows back to the house.
+                    </p>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="range"
+                        min="1.0"
+                        max="2.5"
+                        step="0.05"
+                        value={engineForm.depositCapRatio}
+                        onChange={e => setEngineForm({ ...engineForm, depositCapRatio: parseFloat(e.target.value) })}
+                        className="flex-1 accent-emerald-600"
+                      />
+                      <span className="font-black text-sm text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                        {engineForm.depositCapRatio}x Deposits
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Anti-Whale & Maximum Payout Limits */}
+                <div className="p-5 bg-white border border-slate-200 rounded-3xl space-y-4">
+                  <h4 className="font-black text-sm text-slate-900">Anti-Whale Sizing &amp; Single Win Caps</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Anti-Whale Bet Threshold (INR ₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={engineForm.antiWhaleINR}
+                        onChange={e => setEngineForm({ ...engineForm, antiWhaleINR: parseInt(e.target.value) || 2000 })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">Bets at or above this face 0% win chance</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Anti-Whale Bet Threshold (USD $)
+                      </label>
+                      <input
+                        type="number"
+                        value={engineForm.antiWhaleUSD}
+                        onChange={e => setEngineForm({ ...engineForm, antiWhaleUSD: parseInt(e.target.value) || 25 })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">Bets at or above this face 0% win chance</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Max Single Payout Cap (INR ₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={engineForm.maxSingleWinINR}
+                        onChange={e => setEngineForm({ ...engineForm, maxSingleWinINR: parseInt(e.target.value) || 50000 })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">Ceiling on any single spin/round win</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Max Single Payout Cap (USD $)
+                      </label>
+                      <input
+                        type="number"
+                        value={engineForm.maxSingleWinUSD}
+                        onChange={e => setEngineForm({ ...engineForm, maxSingleWinUSD: parseInt(e.target.value) || 500 })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">Ceiling on any single spin/round win</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Per-Player RTP Override Table */}
+                <div className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-sm text-slate-900">Per-Player Custom RTP Override</h4>
+                      <p className="text-xs text-slate-500">
+                        Set custom RTP rules for individual users (e.g. VIP players vs. flagged arbitrageurs).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600">
+                        <tr>
+                          <th className="p-3">Player</th>
+                          <th className="p-3">Lifetime Deposits</th>
+                          <th className="p-3">Lifetime Withdrawals</th>
+                          <th className="p-3">Current Balance</th>
+                          <th className="p-3">RTP Mode Override</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {allUsers.filter(u => u.role !== 'admin').slice(0, 10).map(u => {
+                          const currentOverride = engineForm.userOverrides[u.id] || 'normal';
+                          return (
+                            <tr key={u.id} className="hover:bg-slate-50/60">
+                              <td className="p-3">
+                                <div className="font-bold text-slate-900">{u.name}</div>
+                                <div className="text-[11px] text-slate-400">{u.email}</div>
+                              </td>
+                              <td className="p-3 text-emerald-600 font-bold">
+                                {formatCurrency(u.totalDeposited || 0)}
+                              </td>
+                              <td className="p-3 text-slate-600">
+                                {formatCurrency(u.totalWithdrawn || 0)}
+                              </td>
+                              <td className="p-3 font-black text-slate-900">
+                                {formatCurrency(u.balance || 0)}
+                              </td>
+                              <td className="p-3">
+                                <select
+                                  value={currentOverride}
+                                  onChange={e => {
+                                    const val = e.target.value as any;
+                                    setEngineForm({
+                                      ...engineForm,
+                                      userOverrides: { ...engineForm.userOverrides, [u.id]: val }
+                                    });
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold ${
+                                    currentOverride === 'drain'
+                                      ? 'bg-rose-50 border-rose-300 text-rose-700'
+                                      : currentOverride === 'vip'
+                                      ? 'bg-amber-50 border-amber-300 text-amber-700'
+                                      : 'bg-white border-slate-300 text-slate-700'
+                                  }`}
+                                >
+                                  <option value="normal">Normal (Engine Default)</option>
+                                  <option value="vip">VIP (Extra Teasers)</option>
+                                  <option value="drain">Drain &amp; Lock (100% Loss)</option>
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Save Settings Action Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => updateHouseEngineSettings(engineForm)}
+                    className="px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider flex items-center space-x-2 shadow-xl transition-all transform active:scale-95"
+                  >
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Apply &amp; Sync House Profit Engine Settings</span>
+                  </button>
                 </div>
               </div>
             )}
