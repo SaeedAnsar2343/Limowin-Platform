@@ -20,7 +20,8 @@ import {
   MessageCircle,
   TrendingUp,
   CreditCard,
-  Smartphone
+  Smartphone,
+  Gift
 } from 'lucide-react';
 
 export const CustomerProfileModal: React.FC = () => {
@@ -157,6 +158,30 @@ export const CustomerProfileModal: React.FC = () => {
   const wonRounds = gameHistory.filter(g => g.isWin).length;
   const winRate = totalRounds > 0 ? ((wonRounds / totalRounds) * 100).toFixed(1) : '68.4';
 
+  // Dynamic VIP Progression System
+  const totalDep = user.totalDeposited || 0;
+  const isINR = currency === 'INR';
+  const tiers = [
+    { name: 'Bronze', threshold: 0, icon: '🥉', next: isINR ? 1000 : 20, nextName: 'Silver', perk: '+5% Reload' },
+    { name: 'Silver', threshold: isINR ? 1000 : 20, icon: '🥈', next: isINR ? 5000 : 100, nextName: 'Gold', perk: '+10% Reload' },
+    { name: 'Gold', threshold: isINR ? 5000 : 100, icon: '🥇', next: isINR ? 25000 : 500, nextName: 'Platinum', perk: '+15% Reload & VIP WhatsApp' },
+    { name: 'Platinum', threshold: isINR ? 25000 : 500, icon: '💎', next: isINR ? 100000 : 2000, nextName: 'Diamond', perk: '+20% Reload & Instant Payout' },
+    { name: 'Diamond', threshold: isINR ? 100000 : 2000, icon: '👑', next: null, nextName: '', perk: 'Max 25% Reload & Concierge' }
+  ];
+
+  let currentTier = tiers[0];
+  for (let i = tiers.length - 1; i >= 0; i--) {
+    if (totalDep >= tiers[i].threshold) {
+      currentTier = tiers[i];
+      break;
+    }
+  }
+
+  const needed = currentTier.next ? Math.max(0, currentTier.next - totalDep) : 0;
+  const progressPercent = currentTier.next
+    ? Math.min(100, Math.max(8, (totalDep / currentTier.next) * 100))
+    : 100;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
@@ -209,6 +234,45 @@ export const CustomerProfileModal: React.FC = () => {
               <span className="text-base sm:text-xl font-black text-yellow-400 leading-tight">
                 {formatCurrency(user.bonusBalance)}
               </span>
+            </div>
+          </div>
+
+          {/* VIP Loyalty Progression Bar & Daily Wheel Trigger */}
+          <div className="mt-3 pt-2.5 border-t border-slate-800/80">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm">{currentTier.icon}</span>
+                <span className="font-black text-amber-300 uppercase tracking-wide text-[11px]">
+                  {currentTier.name} VIP
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">({currentTier.perk})</span>
+              </div>
+              <button
+                onClick={() => setActiveModal('dailyWheel')}
+                className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-400/20 hover:from-amber-500/30 hover:to-yellow-400/30 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase transition-all shadow-xs"
+              >
+                <Gift className="w-3 h-3 text-yellow-400" />
+                <span>Daily Wheel</span>
+              </button>
+            </div>
+
+            {/* Progress track */}
+            <div className="w-full bg-slate-950 rounded-full h-2 border border-slate-700/80 overflow-hidden relative">
+              <div
+                className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-300 h-full rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+              <span>{formatCurrency(totalDep)} lifetime</span>
+              {currentTier.next ? (
+                <span>
+                  Deposit <strong className="text-amber-300">{formatCurrency(needed)}</strong> more for {currentTier.nextName} VIP
+                </span>
+              ) : (
+                <span className="text-amber-400 font-black">🏆 MAXIMUM DIAMOND STATUS</span>
+              )}
             </div>
           </div>
         </div>

@@ -10,9 +10,11 @@ import { PlayModal } from './components/PlayModal';
 import { AuthModal } from './components/AuthModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { LiveSupportModal } from './components/LiveSupportModal';
+import { DailyLuckyWheelModal } from './components/DailyLuckyWheelModal';
 import { AdminPortal } from './components/AdminPortal';
 import { PolicyPages } from './components/PolicyPages';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { VipConciergeFloating } from './components/VipConciergeFloating';
 import { CheckCircle2, AlertCircle, Info, Trophy, Headphones } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
@@ -71,14 +73,8 @@ export const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Floating 24/7 Live Support Button (Desktop Only - mobile has sticky bottom nav) */}
-      <button
-        onClick={() => setActiveModal('support')}
-        className="hidden md:flex fixed bottom-6 right-6 z-40 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 px-4 py-3 rounded-2xl shadow-xl items-center space-x-2 font-black text-xs uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 border border-yellow-300"
-      >
-        <Headphones className="w-4 h-4 fill-current" />
-        <span>24/7 VIP Support</span>
-      </button>
+      {/* Floating 24/7 VIP WhatsApp & Telegram Concierge Pill (Mobile & Desktop) */}
+      <VipConciergeFloating />
 
       {/* Mobile Bottom Navigation Bar (Sticky for Smartphone & Mobile Gaming) */}
       <MobileBottomNav />
@@ -88,6 +84,7 @@ export const AppContent: React.FC = () => {
       <AuthModal />
       <CustomerProfileModal />
       <LiveSupportModal />
+      <DailyLuckyWheelModal />
 
       {/* Toast Notifications System */}
       <div className="fixed bottom-6 left-6 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm">

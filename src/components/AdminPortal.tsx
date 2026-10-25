@@ -271,6 +271,49 @@ export const AdminPortal: React.FC = () => {
                   <p className="text-xs text-slate-500">Global overview across all games, deposits, and player withdrawals.</p>
                 </div>
 
+                {/* GGR & High-Level Casino Revenue Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-6 bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-950 border-2 border-emerald-500/40 rounded-3xl text-white shadow-xl relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                        Net Operator Profit (GGR)
+                      </span>
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Profit Margin: {totalDeposited > 0 ? (((totalDeposited - totalWithdrawn) / totalDeposited) * 100).toFixed(1) : '100.0'}%
+                      </span>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-green-300">
+                      +{formatCurrency(Math.max(0, totalDeposited - totalWithdrawn))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Total Inflow ({formatCurrency(totalDeposited)}) minus Outflow ({formatCurrency(totalWithdrawn)}). 100% protected by House Win Engine.
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-gradient-to-br from-amber-950 via-slate-900 to-amber-950 border-2 border-amber-500/40 rounded-3xl text-white shadow-xl relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                        House Edge Operational Dial
+                      </span>
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        {houseEngineSettings.mode.toUpperCase()} MODE ACTIVE
+                      </span>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-amber-300">
+                      {houseEngineSettings.mode === 'panic'
+                        ? '100% House Win Lockdown'
+                        : houseEngineSettings.mode === 'aggressive'
+                        ? '98% House Edge (Peak)'
+                        : houseEngineSettings.mode === 'harvest'
+                        ? '92% House Edge (Standard)'
+                        : '85% House Edge (Launch)'}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Anti-Martingale: {houseEngineSettings.antiMartingale ? 'ON' : 'OFF'} • Anti-Whale: {currency === 'INR' ? `₹${houseEngineSettings.antiWhaleINR}` : `$${houseEngineSettings.antiWhaleUSD}`} • Max Cap: {currency === 'INR' ? `₹${houseEngineSettings.maxSingleWinINR}` : `$${houseEngineSettings.maxSingleWinUSD}`}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="p-5 bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/30 rounded-2xl">
                     <span className="text-xs font-bold text-emerald-800 uppercase block">Total Deposits Approved</span>
@@ -388,12 +431,125 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* VIP WhatsApp & Telegram Concierge Floating Pill Management */}
+                  <div className="mt-8 pt-6 border-t border-slate-200">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-base font-black text-slate-900">Direct VIP WhatsApp &amp; Telegram Concierge Floating Pill</h3>
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/30">
+                            Player Touchpoint
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Toggle the floating VIP desk on/off, update your direct WhatsApp phone number and Telegram username, and set custom welcome messages.
+                        </p>
+                      </div>
+
+                      {/* Toggle Switch */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSiteForm({
+                            ...siteForm,
+                            vipConciergeEnabled: siteForm.vipConciergeEnabled === false ? true : false
+                          })
+                        }
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-2 ${
+                          siteForm.vipConciergeEnabled !== false
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/20'
+                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            siteForm.vipConciergeEnabled !== false ? 'bg-white animate-pulse' : 'bg-slate-400'
+                          }`}
+                        />
+                        <span>
+                          {siteForm.vipConciergeEnabled !== false ? 'FLOATING PILL: ACTIVE (ON)' : 'FLOATING PILL: DISABLED (OFF)'}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          WhatsApp Phone Number (with Country Code)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="+91 98765 43210"
+                          value={siteForm.vipWhatsappNumber || ''}
+                          onChange={e => setSiteForm({ ...siteForm, vipWhatsappNumber: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:outline-emerald-500"
+                        />
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-[10px] text-slate-400">Players tap this to open direct WhatsApp chat</span>
+                          {siteForm.vipWhatsappNumber && (
+                            <a
+                              href={`https://wa.me/${siteForm.vipWhatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                                siteForm.vipConciergeMessage || 'Hello VIP Concierge'
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-black text-emerald-600 hover:underline flex items-center space-x-1"
+                            >
+                              <span>Test WhatsApp</span>
+                              <span>↗</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Telegram Username (e.g. LimowinVIP or @LimowinVIP)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="LimowinOfficialVIP"
+                          value={siteForm.vipTelegramUsername || ''}
+                          onChange={e => setSiteForm({ ...siteForm, vipTelegramUsername: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:outline-sky-500"
+                        />
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-[10px] text-slate-400">Players tap this to message your Telegram handle</span>
+                          {siteForm.vipTelegramUsername && (
+                            <a
+                              href={`https://t.me/${(siteForm.vipTelegramUsername || '').replace('@', '').trim()}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-black text-sky-600 hover:underline flex items-center space-x-1"
+                            >
+                              <span>Test Telegram</span>
+                              <span>↗</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Pre-filled Welcome Message for WhatsApp
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Hello VIP Concierge, I need assistance with my Limowin account & deposit."
+                          value={siteForm.vipConciergeMessage || ''}
+                          onChange={e => setSiteForm({ ...siteForm, vipConciergeMessage: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs focus:outline-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="pt-4">
                     <button
                       onClick={() => updateSiteSettings(siteForm)}
                       className="px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black rounded-xl shadow-md hover:shadow-lg transition-all"
                     >
-                      Save & Apply Global Site Name
+                      Save &amp; Apply Brand &amp; VIP Concierge Settings
                     </button>
                   </div>
                 </div>

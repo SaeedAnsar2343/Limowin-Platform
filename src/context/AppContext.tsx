@@ -76,6 +76,11 @@ export interface SiteSettings {
   minWithdrawal: number;
   maxWithdrawal: number;
   defaultTheme: 'light' | 'dark';
+  // VIP Floating Concierge Controls
+  vipConciergeEnabled?: boolean;
+  vipTelegramUsername?: string;
+  vipWhatsappNumber?: string;
+  vipConciergeMessage?: string;
 }
 
 export interface PaymentGateways {
@@ -190,6 +195,7 @@ export interface UserProfile {
   createdAt: string;
   lastBetAmount?: number;
   lastBetLost?: boolean;
+  lastDailySpinTime?: number;
 }
 
 export interface DepositRequest {
@@ -267,7 +273,7 @@ interface AppContextType {
   allWithdrawals: WithdrawalRequest[];
   gameHistory: GameRoundHistory[];
   chatMessages: ChatMessage[];
-  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | null;
+  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null;
   activePolicy: string;
   activeGame: GameItem | null;
   theme: 'light' | 'dark';
@@ -286,12 +292,15 @@ interface AppContextType {
   // UI state actions
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (cat: string) => void;
-  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | null) => void;
+  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null) => void;
   setActivePolicy: (p: string) => void;
   setActiveGame: (g: GameItem | null) => void;
   setSoundMuted: (m: boolean) => void;
   toggleTheme: () => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'win') => void;
+
+  // Daily Lucky Wheel & VIP
+  claimDailyWheelReward: (rewardAmount: number) => boolean;
 
   // Auth
   loginUser: (email: string, password?: string) => Promise<boolean>;
@@ -348,7 +357,11 @@ const defaultSettings: SiteSettings = {
   maxDeposit: 500000,
   minWithdrawal: 100,
   maxWithdrawal: 500000,
-  defaultTheme: 'light'
+  defaultTheme: 'light',
+  vipConciergeEnabled: true,
+  vipTelegramUsername: 'LimowinOfficialVIP',
+  vipWhatsappNumber: '+91 98765 43210',
+  vipConciergeMessage: 'Hello VIP Concierge, I need assistance with my Limowin account & deposit.'
 };
 
 const defaultGateways: PaymentGateways = {
@@ -615,7 +628,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFirebaseConnected] = useState<boolean>(true);
 
   // Navigation & UI State
-  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | null>(null);
+  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null>(null);
   const [activePolicy, setActivePolicy] = useState<string>('responsible-gaming');
   const [activeGame, setActiveGame] = useState<GameItem | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light'); // default Light Mode as specified!
@@ -1436,6 +1449,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveGameRoundToFirestore(user.id, historyItem);
   };
 
+  // Claim Daily Free Spin Reward (Credits bonus balance & enforces 5-game lock)
+  const claimDailyWheelReward = (rewardAmount: number) => {
+    if (!user) return false;
+    const now = Date.now();
+    const updated: UserProfile = {
+      ...user,
+      bonusBalance: Number(((user.bonusBalance || 0) + rewardAmount).toFixed(2)),
+      bonusLockGamesRemaining: 5, // Mandatory 5-game playthrough lock
+      lastDailySpinTime: now
+    };
+    setUser(updated);
+    syncUserToFirestore(updated);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`limowin_last_spin_${user.id}`, now.toString());
+      }
+    } catch {}
+    return true;
+  };
+
   // Helper to get or create persistent guest ID if not logged in
   const getGuestId = () => {
     let gid = typeof window !== 'undefined' ? localStorage.getItem('limowin_guest_id') : null;
@@ -1720,6 +1753,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         submitDeposit,
         submitWithdrawal,
         recordGameResult,
+        claimDailyWheelReward,
         checkCanPlayGame,
         calculateWinOutcome,
         calculateDepositBonus,

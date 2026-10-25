@@ -7,7 +7,8 @@ import {
   Shield,
   Search,
   User,
-  LogOut
+  LogOut,
+  Gift
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -102,6 +103,16 @@ export const Navbar: React.FC = () => {
               <span className="hidden sm:inline">Admin Portal</span>
             </button>
           )}
+
+          {/* Daily Spin Wheel Button */}
+          <button
+            onClick={() => setActiveModal('dailyWheel')}
+            className="flex items-center space-x-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-400/20 to-amber-500/15 hover:from-amber-500/25 hover:to-yellow-400/30 text-amber-900 border border-amber-400/50 text-xs font-black shadow-xs transition-all transform active:scale-95 shrink-0 animate-pulse"
+            title="Daily Free Spin Wheel"
+          >
+            <Gift className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-[11px] font-black uppercase text-amber-800 hidden xs:inline sm:inline">Daily Spin</span>
+          </button>
 
           {/* Customer Support Trigger (Desktop Only - mobile uses bottom bar) */}
           <button
