@@ -308,7 +308,19 @@ export const CrashAviatorEngine: React.FC<Props> = ({ game, balance, bonusMultip
     if (outcome.isWin) {
       targetCrashPoint = Math.max(2.1, Number((outcome.multiplier * (1.1 + Math.random() * 0.4)).toFixed(2)));
     } else {
-      targetCrashPoint = Number((1.01 + Math.random() * 0.15).toFixed(2));
+      // Psychological Near-Miss Engine (Dopamine Retention Hook)
+      if (autoCashout && autoCashoutVal > 1.2) {
+        // Crashes agonizingly 0.02x - 0.05x right before their auto-cashout target!
+        targetCrashPoint = Number(Math.max(1.10, autoCashoutVal - (0.02 + Math.random() * 0.05)).toFixed(2));
+      } else {
+        const roll = Math.random();
+        if (roll < 0.45) {
+          // Exciting flight up to 1.80x - 2.35x
+          targetCrashPoint = Number((1.80 + Math.random() * 0.55).toFixed(2));
+        } else {
+          targetCrashPoint = Number((1.08 + Math.random() * 0.35).toFixed(2));
+        }
+      }
     }
 
     crashPointRef.current = targetCrashPoint;

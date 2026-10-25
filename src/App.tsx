@@ -12,6 +12,8 @@ import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { LiveSupportModal } from './components/LiveSupportModal';
 import { DailyLuckyWheelModal } from './components/DailyLuckyWheelModal';
 import { DailyMissionsModal } from './components/DailyMissionsModal';
+import { AbandonedDepositRescueModal } from './components/AbandonedDepositRescueModal';
+import { ZeroBalanceRescueModal } from './components/ZeroBalanceRescueModal';
 import { AdminPortal } from './components/AdminPortal';
 import { PolicyPages } from './components/PolicyPages';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -91,6 +93,8 @@ export const AppContent: React.FC = () => {
       <LiveSupportModal />
       <DailyLuckyWheelModal />
       <DailyMissionsModal />
+      <AbandonedDepositRescueModal />
+      <ZeroBalanceRescueModal />
 
       {/* Toast Notifications System */}
       <div className="fixed bottom-6 left-6 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm">

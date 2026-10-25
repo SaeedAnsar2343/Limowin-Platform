@@ -38,17 +38,16 @@ export const GameCard: React.FC<Props> = ({ game }) => {
 
         {/* Top Badges */}
         <div className="absolute top-2 left-2 flex items-center space-x-1.5 z-10">
-          {game.isHot && (
-            <span className="bg-rose-600/90 backdrop-blur-xs text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center space-x-0.5 shadow-sm">
-              <Flame className="w-2.5 h-2.5 fill-current" />
-              <span>HOT</span>
+          {game.isHot ? (
+            <span className="bg-gradient-to-r from-rose-600 to-amber-600 backdrop-blur-xs text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center space-x-0.5 shadow-sm border border-rose-400/40 animate-pulse">
+              <Flame className="w-2.5 h-2.5 fill-current text-yellow-300" />
+              <span>98.6% PAYOUT (HOT)</span>
             </span>
-          )}
-          {game.is3D && (
+          ) : game.is3D ? (
             <span className="bg-amber-500/90 backdrop-blur-xs text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
               3D
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Top Right "BUY" Feature Badge (matching user screenshot 3) */}

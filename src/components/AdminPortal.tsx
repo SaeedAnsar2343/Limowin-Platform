@@ -32,8 +32,13 @@ import {
   ShieldAlert,
   Sliders,
   Flame,
-  Lock
+  Lock,
+  Unlock,
+  PauseCircle,
+  PlayCircle,
+  RefreshCw
 } from 'lucide-react';
+import { calculateNetHouseProfit, evaluatePlayerRisk, verifyBalanceIntegrity } from '../utils/security';
 
 export const AdminPortal: React.FC = () => {
   const {
@@ -70,7 +75,10 @@ export const AdminPortal: React.FC = () => {
     setActiveModal,
     showToast,
     houseEngineSettings,
-    updateHouseEngineSettings
+    updateHouseEngineSettings,
+    toggleGlobalWithdrawalFreeze,
+    toggleUserPayoutFreeze,
+    resetUserTurnover
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
@@ -312,6 +320,61 @@ export const AdminPortal: React.FC = () => {
                     <p className="text-xs text-slate-400 mt-2">
                       Anti-Martingale: {houseEngineSettings.antiMartingale ? 'ON' : 'OFF'} • Anti-Whale: {currency === 'INR' ? `₹${houseEngineSettings.antiWhaleINR}` : `$${houseEngineSettings.antiWhaleUSD}`} • Max Cap: {currency === 'INR' ? `₹${houseEngineSettings.maxSingleWinINR}` : `$${houseEngineSettings.maxSingleWinUSD}`}
                     </p>
+                  </div>
+                </div>
+
+                {/* Emergency Global Outgoing Withdrawal Kill-Switch Control (Panic Room) */}
+                <div className={`p-5 rounded-3xl border-2 transition-all flex flex-wrap items-center justify-between gap-4 ${
+                  siteSettings.globalWithdrawalsFrozen
+                    ? 'bg-rose-950/80 border-rose-500 text-white shadow-xl shadow-rose-900/30 animate-pulse'
+                    : 'bg-slate-900 border-slate-800 text-white shadow-md'
+                }`}>
+                  <div className="flex items-center space-x-3.5">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                      siteSettings.globalWithdrawalsFrozen ? 'bg-rose-600 text-white' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                    }`}>
+                      {siteSettings.globalWithdrawalsFrozen ? <ShieldAlert className="w-6 h-6 animate-spin" /> : <ShieldCheck className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-black uppercase tracking-wide">
+                          {siteSettings.globalWithdrawalsFrozen ? '🚨 EMERGENCY OUTGOING WITHDRAWAL FREEZE ACTIVE' : '✅ Automated Withdrawal Gateway Online'}
+                        </span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          siteSettings.globalWithdrawalsFrozen ? 'bg-rose-600 text-white' : 'bg-emerald-500/20 text-emerald-300'
+                        }`}>
+                          {siteSettings.globalWithdrawalsFrozen ? 'LOCKED (NO PAYOUTS)' : 'OPERATIONAL'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {siteSettings.globalWithdrawalsFrozen
+                          ? 'All player withdrawal submissions are paused with maintenance screen. Games and deposits remain 100% active.'
+                          : 'Players can submit withdrawals normally subject to 100% turnover and 5-game playthrough rules.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => toggleGlobalWithdrawalFreeze(!siteSettings.globalWithdrawalsFrozen)}
+                      className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center space-x-2 shadow-lg transition-all transform active:scale-95 ${
+                        siteSettings.globalWithdrawalsFrozen
+                          ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                          : 'bg-rose-600 hover:bg-rose-500 text-white'
+                      }`}
+                    >
+                      {siteSettings.globalWithdrawalsFrozen ? (
+                        <>
+                          <PlayCircle className="w-4 h-4" />
+                          <span>Resume Outgoing Withdrawals</span>
+                        </>
+                      ) : (
+                        <>
+                          <PauseCircle className="w-4 h-4" />
+                          <span>Emergency Freeze All Withdrawals</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -1398,56 +1461,115 @@ export const AdminPortal: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
+                <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[850px]">
                     <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600">
                       <tr>
                         <th className="p-3">Player</th>
-                        <th className="p-3">Email</th>
-                        <th className="p-3">Role</th>
+                        <th className="p-3">Email &amp; Phone</th>
                         <th className="p-3">Real Cash</th>
-                        <th className="p-3">Bonus Funds</th>
+                        <th className="p-3">Bonus</th>
+                        <th className="p-3">Net House Profit</th>
+                        <th className="p-3">Turnover Left</th>
+                        <th className="p-3">Risk Assessment</th>
                         <th className="p-3">Status</th>
-                        <th className="p-3">Actions</th>
+                        <th className="p-3">Quick Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {allUsers.map(u => (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold text-slate-900">{u.name}</td>
-                          <td className="p-3 font-mono text-slate-500">{u.email}</td>
-                          <td className="p-3 uppercase text-[10px] font-black">{u.role}</td>
-                          <td className="p-3 font-black text-emerald-600">{formatCurrency(u.balance)}</td>
-                          <td className="p-3 font-black text-yellow-600">{formatCurrency(u.bonusBalance)}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                              u.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {u.status}
-                            </span>
-                          </td>
-                          <td className="p-3 space-x-2">
-                            <button
-                              onClick={() => {
-                                setAdjustingUser(u.id);
-                                setNewBal(u.balance);
-                                setNewBonusBal(u.bonusBalance);
-                              }}
-                              className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[10px]"
-                            >
-                              Adjust Funds
-                            </button>
-                            <button
-                              onClick={() => toggleBlockUser(u.id, u.status)}
-                              className={`px-2.5 py-1 rounded font-bold text-[10px] text-white ${
-                                u.status === 'active' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
-                              }`}
-                            >
-                              {u.status === 'active' ? 'Block User' : 'Unblock'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {allUsers.map(u => {
+                        const netHouse = calculateNetHouseProfit(u.totalDeposited, u.totalWithdrawn);
+                        const risk = evaluatePlayerRisk(u, currency);
+                        const isTampered = !verifyBalanceIntegrity(u);
+                        const turnoverRemaining = u.depositTurnoverRemaining || 0;
+
+                        return (
+                          <tr key={u.id} className="hover:bg-slate-50">
+                            <td className="p-3">
+                              <div className="font-bold text-slate-900">{u.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">{u.id}</div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-mono text-slate-600">{u.email}</div>
+                              {u.phone && <div className="text-[10px] text-slate-400">{u.phone}</div>}
+                            </td>
+                            <td className="p-3 font-black text-emerald-600">{formatCurrency(u.balance)}</td>
+                            <td className="p-3 font-black text-amber-600">{formatCurrency(u.bonusBalance)}</td>
+                            <td className="p-3">
+                              <span className={`font-black ${netHouse >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {netHouse >= 0 ? `+${formatCurrency(netHouse)}` : formatCurrency(netHouse)}
+                              </span>
+                              <div className="text-[9px] text-slate-400">
+                                Dep: {formatCurrency(u.totalDeposited || 0)} • Wth: {formatCurrency(u.totalWithdrawn || 0)}
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <span className={`font-mono text-[11px] font-bold ${turnoverRemaining > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                {turnoverRemaining > 0 ? formatCurrency(turnoverRemaining) : 'Cleared (0)'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${risk.color}`}>
+                                {risk.label}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-col space-y-1">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase text-center ${
+                                  u.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {u.status}
+                                </span>
+                                {u.payoutFrozen && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-purple-100 text-purple-800 text-center">
+                                    PAYOUT LOCKED
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setAdjustingUser(u.id);
+                                    setNewBal(u.balance);
+                                    setNewBonusBal(u.bonusBalance);
+                                  }}
+                                  className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[10px]"
+                                >
+                                  Adjust
+                                </button>
+                                <button
+                                  onClick={() => toggleBlockUser(u.id, u.status)}
+                                  className={`px-2 py-1 rounded font-bold text-[10px] text-white ${
+                                    u.status === 'active' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
+                                  }`}
+                                >
+                                  {u.status === 'active' ? 'Block' : 'Unblock'}
+                                </button>
+                                <button
+                                  onClick={() => toggleUserPayoutFreeze(u.id)}
+                                  className={`px-2 py-1 rounded font-bold text-[10px] ${
+                                    u.payoutFrozen
+                                      ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                                      : 'bg-purple-100 hover:bg-purple-200 text-purple-800'
+                                  }`}
+                                  title="Lock or unlock withdrawal ability for this user"
+                                >
+                                  {u.payoutFrozen ? 'Unlock Payout' : 'Freeze Payout'}
+                                </button>
+                                <button
+                                  onClick={() => resetUserTurnover(u.id)}
+                                  className="px-2 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[10px]"
+                                  title="Reset 100% turnover & 5-game lock"
+                                >
+                                  Reset Turn
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

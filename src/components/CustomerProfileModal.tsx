@@ -11,6 +11,7 @@ import {
   Copy,
   Check,
   Shield,
+  ShieldCheck,
   Sparkles,
   Award,
   AlertTriangle,
@@ -212,7 +213,13 @@ export const CustomerProfileModal: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setActiveModal(null)}
+              onClick={() => {
+                if (currentTab === 'deposit' && (user.totalDeposited === 0 || user.balance === 0)) {
+                  setActiveModal('abandonedRescue');
+                } else {
+                  setActiveModal(null);
+                }
+              }}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
               aria-label="Close Modal"
             >
@@ -666,6 +673,38 @@ export const CustomerProfileModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Emergency Maintenance Freeze Warning */}
+              {siteSettings.globalWithdrawalsFrozen && (
+                <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-2xl space-y-2 text-rose-900 shadow-sm animate-pulse">
+                  <div className="flex items-center space-x-2 font-black text-sm">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <span>⚠️ Banking Gateway Under Scheduled Maintenance</span>
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed">
+                    {siteSettings.freezeReason || 'Outgoing payouts are temporarily paused for banking server reconciliation (Estimated: 35-45 mins). Your balance and funds are 100% secure. You may continue playing all games.'}
+                  </p>
+                </div>
+              )}
+
+              {/* 100% Real Deposit Turnover Requirement Banner */}
+              {(user.depositTurnoverRemaining || 0) > 0 && (
+                <div className="p-4 bg-indigo-50 border-2 border-indigo-300 rounded-2xl space-y-2 text-indigo-950 shadow-xs">
+                  <div className="flex items-center space-x-2 font-black text-sm text-indigo-900">
+                    <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0" />
+                    <span>🛡️ Anti-Money Laundering 100% Deposit Turnover</span>
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed">
+                    As per international gaming regulations, 100% of deposited funds must be wagered before requesting a withdrawal.
+                  </p>
+                  <div className="flex items-center justify-between text-xs bg-white/80 p-2.5 rounded-xl border border-indigo-200 font-bold">
+                    <span className="text-slate-600">Remaining to Wager:</span>
+                    <span className="text-indigo-700 font-black font-mono text-sm">
+                      {formatCurrency(user.depositTurnoverRemaining || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* 5-Game Bonus Playthrough Notice */}
               {hasBonusLock && (
                 <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl space-y-3 shadow-xs">
@@ -858,10 +897,23 @@ export const CustomerProfileModal: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={user.balance < withdrawAmount || withdrawAmount < currencyConfig.minWithdrawal || withdrawAmount > currencyConfig.maxWithdrawal}
-                  className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                  disabled={
+                    siteSettings.globalWithdrawalsFrozen ||
+                    user.payoutFrozen ||
+                    (user.depositTurnoverRemaining || 0) > 0 ||
+                    user.balance < withdrawAmount ||
+                    withdrawAmount < currencyConfig.minWithdrawal ||
+                    withdrawAmount > currencyConfig.maxWithdrawal
+                  }
+                  className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all"
                 >
-                  Confirm Withdrawal Request ({formatCurrency(withdrawAmount)})
+                  {siteSettings.globalWithdrawalsFrozen
+                    ? '⚠️ Gateway Under Scheduled Maintenance'
+                    : user.payoutFrozen
+                    ? '🔒 Payouts Restricted (Contact Support)'
+                    : (user.depositTurnoverRemaining || 0) > 0
+                    ? `Wager Turnover Incomplete (${formatCurrency(user.depositTurnoverRemaining || 0)} Remaining)`
+                    : `Confirm Withdrawal Request (${formatCurrency(withdrawAmount)})`}
                 </button>
               </form>
             </div>

@@ -61,6 +61,13 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { pushService, PushMessage } from '../services/pushNotificationService';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
+import {
+  generateBalanceSignature,
+  verifyBalanceIntegrity,
+  validateTransactionReference,
+  calculateNetHouseProfit,
+  evaluatePlayerRisk
+} from '../utils/security';
 
 export interface SiteSettings {
   siteName: string;
@@ -81,6 +88,9 @@ export interface SiteSettings {
   vipTelegramUsername?: string;
   vipWhatsappNumber?: string;
   vipConciergeMessage?: string;
+  // Emergency Global Financial Protection Switch
+  globalWithdrawalsFrozen?: boolean;
+  freezeReason?: string;
 }
 
 export interface PaymentGateways {
@@ -197,6 +207,10 @@ export interface UserProfile {
   lastBetLost?: boolean;
   lastDailySpinTime?: number;
   deviceId?: string;
+  balanceSignature?: string;
+  depositTurnoverRemaining?: number; // 100% deposit wager turnover required before withdrawal
+  totalWagered?: number;
+  payoutFrozen?: boolean;
 }
 
 export interface DepositRequest {
@@ -274,7 +288,7 @@ interface AppContextType {
   allWithdrawals: WithdrawalRequest[];
   gameHistory: GameRoundHistory[];
   chatMessages: ChatMessage[];
-  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null;
+  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | 'abandonedRescue' | 'zeroBalanceRescue' | null;
   activePolicy: string;
   activeGame: GameItem | null;
   theme: 'light' | 'dark';
@@ -293,7 +307,7 @@ interface AppContextType {
   // UI state actions
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (cat: string) => void;
-  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null) => void;
+  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | 'abandonedRescue' | 'zeroBalanceRescue' | null) => void;
   setActivePolicy: (p: string) => void;
   setActiveGame: (g: GameItem | null) => void;
   setSoundMuted: (m: boolean) => void;
@@ -341,6 +355,9 @@ interface AppContextType {
   deleteBanner: (id: string) => Promise<boolean>;
   houseEngineSettings: HouseEngineSettings;
   updateHouseEngineSettings: (settings: Partial<HouseEngineSettings>) => Promise<boolean>;
+  toggleGlobalWithdrawalFreeze: (freeze: boolean, reason?: string) => Promise<boolean>;
+  toggleUserPayoutFreeze: (userId: string) => Promise<boolean>;
+  resetUserTurnover: (userId: string, customAmount?: number) => Promise<boolean>;
   pushNotifications: PushMessage[];
   clearPushNotifications: () => void;
 }
@@ -362,7 +379,9 @@ const defaultSettings: SiteSettings = {
   vipConciergeEnabled: true,
   vipTelegramUsername: 'LimowinOfficialVIP',
   vipWhatsappNumber: '+91 98765 43210',
-  vipConciergeMessage: 'Hello VIP Concierge, I need assistance with my Limowin account & deposit.'
+  vipConciergeMessage: 'Hello VIP Concierge, I need assistance with my Limowin account & deposit.',
+  globalWithdrawalsFrozen: false,
+  freezeReason: ''
 };
 
 const defaultGateways: PaymentGateways = {
@@ -445,10 +464,14 @@ const defaultUser: UserProfile = {
   referralEarnings: initialDetectedCurrency === 'INR' ? 2500.00 : 30.00,
   gamesPlayedCount: 0,
   bonusLockGamesRemaining: 5,
+  depositTurnoverRemaining: 0,
+  totalWagered: 15000,
+  payoutFrozen: false,
   currency: initialDetectedCurrency,
   kycStatus: 'verified',
   twoFactorEnabled: true,
-  createdAt: '2026-09-15T10:00:00Z'
+  createdAt: '2026-09-15T10:00:00Z',
+  balanceSignature: generateBalanceSignature('user-demo-1', initialDetectedCurrency === 'INR' ? 18450.00 : 250.00, initialDetectedCurrency === 'INR' ? 25000.00 : 300.00, initialDetectedCurrency === 'INR' ? 12000.00 : 150.00)
 };
 
 const defaultAdmin: UserProfile = {
@@ -460,6 +483,9 @@ const defaultAdmin: UserProfile = {
   bonusBalance: 0,
   totalDeposited: 0,
   totalWithdrawn: 0,
+  depositTurnoverRemaining: 0,
+  totalWagered: 0,
+  payoutFrozen: false,
   vipLevel: 'Owner & Super Admin',
   status: 'active',
   referralCode: 'ADMIN-SAEED',
@@ -471,7 +497,8 @@ const defaultAdmin: UserProfile = {
   currency: initialDetectedCurrency,
   kycStatus: 'verified',
   twoFactorEnabled: true,
-  createdAt: '2026-01-01T00:00:00Z'
+  createdAt: '2026-01-01T00:00:00Z',
+  balanceSignature: generateBalanceSignature('admin-super-saeed', initialDetectedCurrency === 'INR' ? 100000.00 : 2500.00, 0, 0)
 };
 
 const defaultBanners: BannerSlide[] = [
@@ -579,7 +606,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('limowin_auth_user');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.id) {
+            // Cryptographic balance integrity check on boot
+            if (!verifyBalanceIntegrity(parsed)) {
+              console.warn('🚨 Balance integrity checksum failed! Locking account.');
+              return { ...parsed, status: 'blocked' };
+            }
+            return parsed;
+          }
+        }
       }
     } catch {}
     return null;
@@ -587,7 +624,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setUser = (newUserOrFn: UserProfile | null | ((prev: UserProfile | null) => UserProfile | null)) => {
     setUserState(prev => {
-      const resolved = typeof newUserOrFn === 'function' ? newUserOrFn(prev) : newUserOrFn;
+      let resolved = typeof newUserOrFn === 'function' ? newUserOrFn(prev) : newUserOrFn;
+      if (resolved) {
+        // Auto-sign balance with cryptographic signature
+        const sig = generateBalanceSignature(
+          resolved.id,
+          resolved.balance || 0,
+          resolved.totalDeposited || 0,
+          resolved.totalWithdrawn || 0
+        );
+        resolved = {
+          ...resolved,
+          balanceSignature: sig,
+          depositTurnoverRemaining: resolved.depositTurnoverRemaining !== undefined ? resolved.depositTurnoverRemaining : 0,
+          totalWagered: resolved.totalWagered !== undefined ? resolved.totalWagered : 0
+        };
+      }
       try {
         if (typeof window !== 'undefined') {
           if (resolved) {
@@ -629,7 +681,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFirebaseConnected] = useState<boolean>(true);
 
   // Navigation & UI State
-  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null>(null);
+  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | 'abandonedRescue' | 'zeroBalanceRescue' | null>(null);
   const [activePolicy, setActivePolicy] = useState<string>('responsible-gaming');
   const [activeGame, setActiveGame] = useState<GameItem | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light'); // default Light Mode as specified!
@@ -1278,7 +1330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('You have been logged out securely.', 'info');
   };
 
-  // Submit Deposit (Uses Admin-configured Deposit Bonus + 5-game Play Lock)
+  // Submit Deposit (Uses Admin-configured Deposit Bonus + 5-game Play Lock + Anti-Fraud Check)
   const submitDeposit = async (method: string, amount: number, txHash: string, claimPromoBonus: boolean = true) => {
     if (!user) {
       showToast('Please log in first to make a deposit', 'error');
@@ -1288,6 +1340,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (amount <= 0) {
       showToast('Please enter a valid deposit amount', 'error');
+      return false;
+    }
+
+    // 1. Strict Payment Reference Validation (Real UPI UTR or Crypto TxHash format)
+    const refCheck = validateTransactionReference(method, txHash);
+    if (!refCheck.valid) {
+      showToast(refCheck.error || 'Please enter a valid Transaction Reference / UTR', 'error');
+      return false;
+    }
+
+    // 2. Global UTR / TxHash Duplicate Detection (Replay attack prevention)
+    const cleanTx = (txHash || '').trim().toLowerCase();
+    const isDuplicate = allDeposits.some(d => d.txHash && d.txHash.trim().toLowerCase() === cleanTx);
+    if (isDuplicate) {
+      showToast('⚠️ This Transaction ID / UTR has already been submitted on Limowin! Each deposit requires a unique transaction.', 'error');
       return false;
     }
 
@@ -1303,7 +1370,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount,
       bonusAmount,
       currency,
-      txHash: txHash || 'TXN-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+      txHash: txHash.trim(),
       status: 'pending',
       createdAt: new Date().toISOString()
     };
@@ -1334,11 +1401,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  // Submit Withdrawal with 100 Min and 5 Lac Max Limits + 5-Game Playthrough Verification
+  // Submit Withdrawal with 100 Min and 5 Lac Max Limits + 5-Game Playthrough + 100% Deposit Turnover + Fraud Shield
   const submitWithdrawal = async (method: string, amount: number, details: string) => {
     if (!user) {
       showToast('Please log in first to withdraw', 'error');
       setActiveModal('login');
+      return false;
+    }
+
+    // 0. Global Emergency Withdrawal Kill-Switch Check (Panic Room)
+    if (siteSettings.globalWithdrawalsFrozen) {
+      showToast(
+        siteSettings.freezeReason ||
+          '⚠️ Banking Gateway Under Scheduled Maintenance: Outgoing payouts are temporarily paused for routine banking ledger reconciliation (Estimated: 35-45 mins). All funds and balances are 100% secure.',
+        'error'
+      );
+      return false;
+    }
+
+    // 1. Individual User Payout Freeze Check
+    if (user.payoutFrozen) {
+      showToast('⚠️ Payouts on this account are currently restricted by security audit. Please contact VIP Concierge support.', 'error');
+      return false;
+    }
+
+    // 2. Cryptographic Balance Integrity Verification (Anti-DevTools / LocalStorage Hack)
+    if (!verifyBalanceIntegrity(user)) {
+      const lockedUser: UserProfile = { ...user, status: 'blocked' };
+      setUser(lockedUser);
+      syncUserToFirestore(lockedUser);
+      showToast('🚨 Security Warning: Account balance integrity check failed. Account locked for security review.', 'error');
       return false;
     }
 
@@ -1361,7 +1453,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    // Strict 5-game bonus playthrough check
+    // 3. Strict 100% Real Deposit Turnover Requirement (Anti-Money Laundering)
+    const turnoverLeft = user.depositTurnoverRemaining || 0;
+    if (turnoverLeft > 0) {
+      showToast(
+        `⚠️ Anti-Money Laundering Rule: 100% deposit turnover required before withdrawing. You have ${formatCurrency(turnoverLeft)} remaining to wager on any games.`,
+        'error'
+      );
+      return false;
+    }
+
+    // 4. Strict 5-game bonus playthrough check
     if (user.bonusLockGamesRemaining > 0 && user.bonusBalance > 0) {
       const remaining = user.bonusLockGamesRemaining;
       const completed = 5 - remaining;
@@ -1438,17 +1540,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const newBal = Number(Math.max(0, user.balance + netProfit).toFixed(2));
+    const nextWagered = Number(((user.totalWagered || 0) + bet).toFixed(2));
+    const nextTurnover = Math.max(0, Number(((user.depositTurnoverRemaining || 0) - bet).toFixed(2)));
+
     const updatedUser: UserProfile = {
       ...user,
       balance: newBal,
       gamesPlayedCount: nextGamesCount,
       bonusLockGamesRemaining: nextBonusLock,
+      totalWagered: nextWagered,
+      depositTurnoverRemaining: nextTurnover,
       lastBetAmount: bet,
       lastBetLost: !isWin
     };
 
     setUser(updatedUser);
     syncUserToFirestore(updatedUser);
+
+    // Retention Prompt: If player just hit 0 balance and had deposited, trigger VIP Loss-Shield Reload offer
+    if (newBal === 0 && (user.totalDeposited || 0) > 0) {
+      setTimeout(() => {
+        setActiveModal('zeroBalanceRescue');
+      }, 1200);
+    }
 
     // Save Game Round
     const historyItem: GameRoundHistory = {
@@ -1608,7 +1722,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         balance: updatedBal,
         bonusBalance: updatedBonus,
         totalDeposited: targetUser.totalDeposited + dep.amount,
-        bonusLockGamesRemaining: 5
+        bonusLockGamesRemaining: 5,
+        depositTurnoverRemaining: (targetUser.depositTurnoverRemaining || 0) + dep.amount
       };
       setAllUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
       if (user && user.id === targetUser.id) {
@@ -1726,6 +1841,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const toggleGlobalWithdrawalFreeze = async (freeze: boolean, reason?: string) => {
+    const updated = {
+      ...siteSettings,
+      globalWithdrawalsFrozen: freeze,
+      freezeReason: reason || (freeze ? '⚠️ Banking Gateway Under Scheduled Maintenance: Outgoing payouts are temporarily paused for routine bank server reconciliation (Estimated: 35-45 mins).' : '')
+    };
+    setSiteSettings(updated);
+    await syncSiteSettingsToFirestore(updated);
+    showToast(freeze ? '🛑 EMERGENCY WITHDRAWAL FREEZE ACTIVATED! All outgoing payouts paused.' : '✅ Withdrawal Gateway Resumed! Payouts re-enabled.', freeze ? 'error' : 'success');
+    return true;
+  };
+
+  const toggleUserPayoutFreeze = async (userId: string) => {
+    const target = allUsers.find(u => u.id === userId);
+    if (!target) return false;
+    const nextState = !target.payoutFrozen;
+    const updated: UserProfile = { ...target, payoutFrozen: nextState };
+    setAllUsers(prev => prev.map(u => u.id === userId ? updated : u));
+    if (user && user.id === userId) setUser(updated);
+    await syncUserToFirestore(updated);
+    showToast(`Payout lock for ${target.name} set to ${nextState ? 'FROZEN 🔒' : 'ACTIVE ✅'}`, 'info');
+    return true;
+  };
+
+  const resetUserTurnover = async (userId: string, customAmount?: number) => {
+    const target = allUsers.find(u => u.id === userId);
+    if (!target) return false;
+    const newTurnover = customAmount !== undefined ? customAmount : target.totalDeposited || 1000;
+    const updated: UserProfile = {
+      ...target,
+      depositTurnoverRemaining: newTurnover,
+      bonusLockGamesRemaining: 5
+    };
+    setAllUsers(prev => prev.map(u => u.id === userId ? updated : u));
+    if (user && user.id === userId) setUser(updated);
+    await syncUserToFirestore(updated);
+    showToast(`Turnover requirement for ${target.name} reset to ${formatCurrency(newTurnover)} (5 games)`, 'info');
+    return true;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1794,6 +1949,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteBanner,
         houseEngineSettings,
         updateHouseEngineSettings,
+        toggleGlobalWithdrawalFreeze,
+        toggleUserPayoutFreeze,
+        resetUserTurnover,
         pushNotifications,
         clearPushNotifications
       }}

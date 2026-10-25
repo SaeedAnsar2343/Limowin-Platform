@@ -35,11 +35,11 @@ export const MinesEngine: React.FC<Props> = ({ game, balance, bonusMultiplier, o
     sound.playChip();
     setLastWin(null);
 
-    // Calculate secret outcome
+    // Calculate secret outcome with Near-Miss Hook
     const outcome = calculateWinOutcome(bet, 3.5);
     plannedOutcomeRef.current = {
       isWin: outcome.isWin,
-      maxSafeClicks: outcome.isWin ? Math.floor(3 + Math.random() * 3) : 0
+      maxSafeClicks: outcome.isWin ? Math.floor(3 + Math.random() * 3) : Math.floor(1 + Math.random() * 2)
     };
 
     // Generate random mines
