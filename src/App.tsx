@@ -11,10 +11,12 @@ import { AuthModal } from './components/AuthModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { LiveSupportModal } from './components/LiveSupportModal';
 import { DailyLuckyWheelModal } from './components/DailyLuckyWheelModal';
+import { DailyMissionsModal } from './components/DailyMissionsModal';
 import { AdminPortal } from './components/AdminPortal';
 import { PolicyPages } from './components/PolicyPages';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { VipConciergeFloating } from './components/VipConciergeFloating';
+import { FlashDepositBanner } from './components/FlashDepositBanner';
 import { CheckCircle2, AlertCircle, Info, Trophy, Headphones } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
@@ -28,6 +30,9 @@ export const AppContent: React.FC = () => {
     }`}>
       {/* Global Navigation */}
       <Navbar />
+
+      {/* 15-Minute Flash Welcome Deposit Countdown Banner */}
+      <FlashDepositBanner />
 
       {/* Categories Bar */}
       <CategoryNav />
@@ -85,6 +90,7 @@ export const AppContent: React.FC = () => {
       <CustomerProfileModal />
       <LiveSupportModal />
       <DailyLuckyWheelModal />
+      <DailyMissionsModal />
 
       {/* Toast Notifications System */}
       <div className="fixed bottom-6 left-6 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm">

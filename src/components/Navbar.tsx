@@ -8,7 +8,8 @@ import {
   Search,
   User,
   LogOut,
-  Gift
+  Gift,
+  Target
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -112,6 +113,16 @@ export const Navbar: React.FC = () => {
           >
             <Gift className="w-3.5 h-3.5 text-amber-600" />
             <span className="text-[11px] font-black uppercase text-amber-800 hidden xs:inline sm:inline">Daily Spin</span>
+          </button>
+
+          {/* Daily Missions / Quests Button */}
+          <button
+            onClick={() => setActiveModal('dailyQuests')}
+            className="flex items-center space-x-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black transition-all border border-slate-200 shadow-xs shrink-0"
+            title="Daily Missions & Quests"
+          >
+            <Target className="w-3.5 h-3.5 text-rose-500" />
+            <span className="text-[11px] font-black uppercase text-slate-700 hidden md:inline">Missions</span>
           </button>
 
           {/* Customer Support Trigger (Desktop Only - mobile uses bottom bar) */}

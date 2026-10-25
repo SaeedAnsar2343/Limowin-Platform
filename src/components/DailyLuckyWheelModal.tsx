@@ -10,19 +10,21 @@ interface WheelSector {
   usdAmount: number;
   isSpins?: boolean;
   spinsCount?: number;
+  isTryAgain?: boolean;
+  isMinimal?: boolean;
   color: string;
   textColor: string;
 }
 
 const SECTORS: WheelSector[] = [
-  { label: '₹10 / $0.20', inrAmount: 10, usdAmount: 0.2, color: '#1e293b', textColor: '#f8fafc' },
-  { label: '5 Free Spins', inrAmount: 15, usdAmount: 0.3, isSpins: true, spinsCount: 5, color: '#f59e0b', textColor: '#0f172a' },
-  { label: '₹25 / $0.50', inrAmount: 25, usdAmount: 0.5, color: '#047857', textColor: '#ffffff' },
-  { label: '₹5 / $0.10', inrAmount: 5, usdAmount: 0.1, color: '#334155', textColor: '#f8fafc' },
-  { label: '10 Free Spins', inrAmount: 30, usdAmount: 0.6, isSpins: true, spinsCount: 10, color: '#8b5cf6', textColor: '#ffffff' },
-  { label: '₹50 VIP', inrAmount: 50, usdAmount: 1.0, color: '#d97706', textColor: '#0f172a' },
-  { label: '₹15 / $0.30', inrAmount: 15, usdAmount: 0.3, color: '#0369a1', textColor: '#ffffff' },
-  { label: '₹100 MEGA', inrAmount: 100, usdAmount: 2.0, color: '#dc2626', textColor: '#ffffff' }
+  { label: 'Try Luck Again', inrAmount: 0, usdAmount: 0, isTryAgain: true, color: '#334155', textColor: '#cbd5e1' },
+  { label: '₹5 / $0.10', inrAmount: 5, usdAmount: 0.1, isMinimal: true, color: '#047857', textColor: '#ffffff' },
+  { label: 'Try Luck Again', inrAmount: 0, usdAmount: 0, isTryAgain: true, color: '#1e293b', textColor: '#cbd5e1' },
+  { label: '5 Free Spins', inrAmount: 10, usdAmount: 0.2, isSpins: true, spinsCount: 5, color: '#f59e0b', textColor: '#0f172a' },
+  { label: 'Try Luck Again', inrAmount: 0, usdAmount: 0, isTryAgain: true, color: '#334155', textColor: '#cbd5e1' },
+  { label: '₹10 / $0.20', inrAmount: 10, usdAmount: 0.2, color: '#0284c7', textColor: '#ffffff' },
+  { label: 'Try Luck Again', inrAmount: 0, usdAmount: 0, isTryAgain: true, color: '#1e293b', textColor: '#cbd5e1' },
+  { label: '₹25 VIP', inrAmount: 25, usdAmount: 0.5, color: '#d97706', textColor: '#0f172a' }
 ];
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -34,12 +36,16 @@ export const DailyLuckyWheelModal: React.FC = () => {
   const [timeLeftStr, setTimeLeftStr] = useState<string>('');
   const [canSpin, setCanSpin] = useState<boolean>(true);
 
+  // Extra spin package: max 5 spins per session (4 Try Luck Again, 1 minimal of all)
+  const [spinsLeft, setSpinsLeft] = useState<number>(5);
+  const [sessionSpinsDone, setSessionSpinsDone] = useState<number>(0);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rotationRef = useRef<number>(0);
   const animRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
-  // Check cooldown timer
+  // Check cooldown timer & load active session spins
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -55,8 +61,13 @@ export const DailyLuckyWheelModal: React.FC = () => {
       const now = Date.now();
       const elapsed = now - savedTime;
 
-      if (savedTime > 0 && elapsed < COOLDOWN_MS) {
+      // Check saved session spins left
+      const savedSpins = localStorage.getItem(`limowin_session_spins_${user.id}`);
+      const savedSpinsNum = savedSpins !== null ? parseInt(savedSpins, 10) : 5;
+
+      if (savedTime > 0 && elapsed < COOLDOWN_MS && savedSpinsNum <= 0) {
         setCanSpin(false);
+        setSpinsLeft(0);
         const rem = COOLDOWN_MS - elapsed;
         const hours = Math.floor(rem / (1000 * 60 * 60));
         const mins = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60));
@@ -65,6 +76,15 @@ export const DailyLuckyWheelModal: React.FC = () => {
       } else {
         setCanSpin(true);
         setTimeLeftStr('');
+        if (savedSpinsNum > 0 && elapsed < COOLDOWN_MS) {
+          setSpinsLeft(savedSpinsNum);
+          setSessionSpinsDone(5 - savedSpinsNum);
+        } else if (elapsed >= COOLDOWN_MS) {
+          // Fresh 24h reset: restore 5 spins package
+          setSpinsLeft(5);
+          setSessionSpinsDone(0);
+          localStorage.removeItem(`limowin_session_spins_${user.id}`);
+        }
       }
     };
 
@@ -204,16 +224,17 @@ export const DailyLuckyWheelModal: React.FC = () => {
     sound.playChip();
     sound.playWheelSpin();
 
-    // Select reward with house edge distribution (teasers: ₹10, ₹15, 5 Free Spins most frequent)
-    const weights = [0.35, 0.25, 0.12, 0.10, 0.08, 0.05, 0.04, 0.01];
-    let rand = Math.random();
-    let targetIdx = 0;
-    for (let i = 0; i < weights.length; i++) {
-      if (rand < weights[i]) {
-        targetIdx = i;
-        break;
-      }
-      rand -= weights[i];
+    // Deterministic Extra Spins Rule: Max 5 spins granted
+    // Exactly 4 land on "Try your luck again" (indices 0, 2, 4, 6)
+    // Exactly 1 lands on minimal of all (index 1: ₹5 / $0.10)
+    const tryAgainIndices = [0, 2, 4, 6];
+    const isWinSpin = sessionSpinsDone === 2; // 3rd spin out of 5 awards minimal prize
+    let targetIdx: number;
+
+    if (isWinSpin) {
+      targetIdx = 1; // Minimal of all (₹5 / $0.10)
+    } else {
+      targetIdx = tryAgainIndices[Math.floor(Math.random() * tryAgainIndices.length)];
     }
 
     const sliceAngle = (2 * Math.PI) / SECTORS.length;
@@ -245,19 +266,32 @@ export const DailyLuckyWheelModal: React.FC = () => {
         const landedSector = SECTORS[targetIdx];
         setWinningSector(landedSector);
 
-        // Sound & Confetti
-        sound.playJackpot();
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        const nextSpinsDone = sessionSpinsDone + 1;
+        const nextSpinsLeft = Math.max(0, 5 - nextSpinsDone);
+        setSessionSpinsDone(nextSpinsDone);
+        setSpinsLeft(nextSpinsLeft);
+        localStorage.setItem(`limowin_session_spins_${user.id}`, nextSpinsLeft.toString());
 
-        // Credit to bonus balance with 5-game playthrough lock
-        const rewardAmt = currency === 'INR' ? landedSector.inrAmount : landedSector.usdAmount;
-        claimDailyWheelReward(rewardAmt);
-        setCanSpin(false);
+        if (landedSector.isTryAgain) {
+          sound.playBounce();
+          if (nextSpinsLeft > 0) {
+            showToast(`😅 Try your luck again! You have ${nextSpinsLeft} spins left.`, 'info');
+          } else {
+            showToast('😅 Try your luck again tomorrow! All 5 daily spins used.', 'info');
+            setCanSpin(false);
+          }
+        } else {
+          // Minimal prize won
+          sound.playJackpot();
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          const rewardAmt = currency === 'INR' ? landedSector.inrAmount : landedSector.usdAmount;
+          claimDailyWheelReward(rewardAmt);
+          showToast(`🎉 Won Minimal Reward: ${landedSector.label}! (${nextSpinsLeft} extra spins left)`, 'win');
+        }
 
-        showToast(
-          `🎉 Won ${landedSector.label}! Credited to Bonus Balance (Play 5 games to unlock withdrawal).`,
-          'win'
-        );
+        if (nextSpinsLeft <= 0) {
+          setCanSpin(false);
+        }
       }
     };
 
@@ -303,22 +337,35 @@ export const DailyLuckyWheelModal: React.FC = () => {
             className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] rounded-full drop-shadow-[0_0_35px_rgba(245,158,11,0.25)]"
           />
 
-          {/* Winning Reward Banner Overlay */}
+          {/* Winning / Try Again Reward Banner Overlay */}
           {winningSector && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-slate-950/95 border-2 border-yellow-400 rounded-2xl shadow-2xl flex flex-col items-center animate-bounce z-20">
-              <span className="text-[10px] text-yellow-400 font-black uppercase tracking-wider">
-                🎉 YOU WON!
+            <div
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-slate-950/95 border-2 rounded-2xl shadow-2xl flex flex-col items-center animate-bounce z-20 ${
+                winningSector.isTryAgain ? 'border-slate-500 text-slate-300' : 'border-yellow-400 text-white'
+              }`}
+            >
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider ${
+                  winningSector.isTryAgain ? 'text-slate-400' : 'text-yellow-400'
+                }`}
+              >
+                {winningSector.isTryAgain ? '😅 SO CLOSE!' : '🎉 YOU WON!'}
               </span>
-              <span className="text-sm sm:text-base font-black text-white whitespace-nowrap">
+              <span className="text-sm sm:text-base font-black whitespace-nowrap">
                 {winningSector.label}
               </span>
+              {spinsLeft > 0 && winningSector.isTryAgain && (
+                <span className="text-[10px] text-amber-300 font-bold mt-0.5">
+                  {spinsLeft} extra spin{spinsLeft > 1 ? 's' : ''} left!
+                </span>
+              )}
             </div>
           )}
         </div>
 
         {/* Action Button & Cooldown */}
         <div className="w-full mt-4 space-y-2.5">
-          {canSpin ? (
+          {canSpin && spinsLeft > 0 ? (
             <button
               onClick={handleSpin}
               disabled={isSpinning}
@@ -329,7 +376,13 @@ export const DailyLuckyWheelModal: React.FC = () => {
               }`}
             >
               <Sparkles className="w-4 h-4 text-slate-950" />
-              <span>{isSpinning ? 'SPINNING WHEEL...' : 'SPIN FOR FREE NOW'}</span>
+              <span>
+                {isSpinning
+                  ? 'SPINNING WHEEL...'
+                  : spinsLeft > 1
+                  ? `SPIN (SPINS LEFT: ${spinsLeft})`
+                  : 'SPIN FOR FREE NOW'}
+              </span>
             </button>
           ) : (
             <div className="w-full p-3.5 bg-slate-800/80 border border-slate-700/60 rounded-2xl flex flex-col items-center text-center space-y-1">

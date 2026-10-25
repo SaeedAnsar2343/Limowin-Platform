@@ -196,6 +196,7 @@ export interface UserProfile {
   lastBetAmount?: number;
   lastBetLost?: boolean;
   lastDailySpinTime?: number;
+  deviceId?: string;
 }
 
 export interface DepositRequest {
@@ -273,7 +274,7 @@ interface AppContextType {
   allWithdrawals: WithdrawalRequest[];
   gameHistory: GameRoundHistory[];
   chatMessages: ChatMessage[];
-  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null;
+  activeModal: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null;
   activePolicy: string;
   activeGame: GameItem | null;
   theme: 'light' | 'dark';
@@ -292,7 +293,7 @@ interface AppContextType {
   // UI state actions
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (cat: string) => void;
-  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null) => void;
+  setActiveModal: (m: 'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null) => void;
   setActivePolicy: (p: string) => void;
   setActiveGame: (g: GameItem | null) => void;
   setSoundMuted: (m: boolean) => void;
@@ -628,7 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFirebaseConnected] = useState<boolean>(true);
 
   // Navigation & UI State
-  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | null>(null);
+  const [activeModal, setActiveModal] = useState<'login' | 'register' | 'forgot' | 'profile' | 'deposit' | 'withdraw' | 'support' | 'admin' | 'policy' | 'dailyWheel' | 'dailyQuests' | null>(null);
   const [activePolicy, setActivePolicy] = useState<string>('responsible-gaming');
   const [activeGame, setActiveGame] = useState<GameItem | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light'); // default Light Mode as specified!
@@ -967,6 +968,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Persistent hardware/device fingerprint generator for fraud detection
+  const getDeviceId = (): string => {
+    try {
+      if (typeof window !== 'undefined') {
+        let did = localStorage.getItem('limowin_device_id');
+        if (!did) {
+          did = 'dev-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
+          localStorage.setItem('limowin_device_id', did);
+        }
+        return did;
+      }
+    } catch {}
+    return 'dev-generic';
+  };
+
   // Login
   const loginUser = async (email: string, password?: string) => {
     const cleanEmail = email.trim().toLowerCase();
@@ -1199,6 +1215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currency: currency,
         kycStatus: 'verified',
         twoFactorEnabled: false,
+        deviceId: getDeviceId(),
         createdAt: new Date().toISOString()
       };
 
@@ -1231,6 +1248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currency: currency,
         kycStatus: 'verified',
         twoFactorEnabled: false,
+        deviceId: getDeviceId(),
         createdAt: new Date().toISOString()
       };
 

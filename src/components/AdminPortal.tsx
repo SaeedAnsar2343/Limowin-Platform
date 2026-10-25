@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Percent,
   AlertCircle,
+  AlertTriangle,
   MessageCircle,
   Send,
   Smartphone,
@@ -1175,6 +1176,12 @@ export const AdminPortal: React.FC = () => {
                       const netDeposit = reqUser ? ((reqUser.totalDeposited || 0) - (reqUser.totalWithdrawn || 0)) : 0;
                       const isSafe = isBonusUnlocked && gamesCount >= 5;
 
+                      // Device Fingerprint Multi-Account Detection
+                      const duplicateAccounts = reqUser?.deviceId
+                        ? allUsers.filter(u => u.deviceId && u.deviceId === reqUser.deviceId && u.id !== reqUser.id)
+                        : [];
+                      const hasMultiAccount = duplicateAccounts.length > 0;
+
                       return (
                         <div
                           key={w.id}
@@ -1218,6 +1225,23 @@ export const AdminPortal: React.FC = () => {
                                 Net Deposit: {formatCurrency(netDeposit)}
                               </span>
                             </div>
+
+                            {/* Multi-Account Device Fingerprint Audit Pill */}
+                            {hasMultiAccount && (
+                              <div className="mt-2 p-2 rounded-xl border bg-amber-50 border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between gap-2 animate-pulse">
+                                <div className="flex items-center space-x-1.5">
+                                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span>
+                                    ⚠️ MULTI-ACCOUNT FRAUD SUSPECT: {duplicateAccounts.length + 1} accounts linked to this phone (
+                                    {duplicateAccounts.map(u => u.name || u.email).slice(0, 2).join(', ')}
+                                    {duplicateAccounts.length > 2 ? ` +${duplicateAccounts.length - 2} more` : ''})
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-200 text-amber-950 font-black shrink-0">
+                                  MATCHED DEVICE ID
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {w.status === 'pending' && (
